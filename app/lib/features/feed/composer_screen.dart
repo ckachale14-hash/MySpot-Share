@@ -23,6 +23,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   String _visibility = 'public';
   bool _busy = false;
   bool _aiBusy = false;
+  bool _aiImgBusy = false;
 
   @override
   void dispose() {
@@ -58,6 +59,47 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
       _toast('AI assist unavailable: $e');
     } finally {
       if (mounted) setState(() => _aiBusy = false);
+    }
+  }
+
+  Future<void> _generateImage() async {
+    final prompt = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final c = TextEditingController();
+        return AlertDialog(
+          title: const Text('Generate an image'),
+          content: TextField(
+            controller: c,
+            autofocus: true,
+            decoration: const InputDecoration(
+                hintText: 'e.g. a vibrant market stall, warm lighting'),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, c.text.trim()),
+                child: const Text('Generate')),
+          ],
+        );
+      },
+    );
+    if (prompt == null || prompt.isEmpty) return;
+    setState(() => _aiImgBusy = true);
+    try {
+      final res = await ref
+          .read(functionsProvider)
+          .httpsCallable('generateImage')
+          .call({'prompt': prompt});
+      final url = (res.data as Map)['url'] as String?;
+      if (url != null && url.isNotEmpty) {
+        setState(() => _image = MediaItem(url: url, type: 'image'));
+      }
+    } catch (e) {
+      _toast('Image generation unavailable: $e');
+    } finally {
+      if (mounted) setState(() => _aiImgBusy = false);
     }
   }
 
@@ -144,13 +186,15 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
               ),
             ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               IconButton.filledTonal(
                 onPressed: _busy ? null : _addImage,
                 icon: const Icon(Icons.image_outlined),
               ),
-              const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: _aiBusy ? null : _improveWithAi,
                 icon: _aiBusy
@@ -160,6 +204,16 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.auto_awesome, size: 18),
                 label: const Text('Improve with AI'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _aiImgBusy ? null : _generateImage,
+                icon: _aiImgBusy
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.auto_awesome_motion, size: 18),
+                label: const Text('AI image'),
               ),
             ],
           ),

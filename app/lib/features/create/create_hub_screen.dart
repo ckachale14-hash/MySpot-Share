@@ -33,9 +33,14 @@ class CreateHubScreen extends StatelessWidget {
           _Tile(
             icon: Icons.live_tv_outlined,
             title: 'Go Live',
-            subtitle: 'Host a discussion or Q&A (coming in P3)',
-            enabled: false,
-            onTap: () {},
+            subtitle: 'Host a discussion, launch, or Q&A',
+            onTap: () => context.push('/live/host'),
+          ),
+          _Tile(
+            icon: Icons.campaign_outlined,
+            title: 'Promote',
+            subtitle: 'Boost a post with an ad campaign',
+            onTap: () => context.push('/ads'),
           ),
         ],
       ),
@@ -49,23 +54,20 @@ class _Tile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.enabled = true,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withValues(alpha: enabled ? 1 : 0.4),
+      color: scheme.surfaceContainerHighest,
       child: ListTile(
-        enabled: enabled,
         leading: CircleAvatar(
           backgroundColor: scheme.primaryContainer,
           foregroundColor: scheme.onPrimaryContainer,
@@ -74,7 +76,7 @@ class _Tile extends StatelessWidget {
         title: Text(title),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
-        onTap: enabled ? onTap : null,
+        onTap: onTap,
       ),
     );
   }

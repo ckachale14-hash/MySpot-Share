@@ -105,7 +105,7 @@ class ProfileScreen extends ConsumerWidget {
                       icon: const Icon(Icons.workspace_premium_outlined),
                       label: const Text('Go Premium')),
                 ),
-              if (user.role == 'admin' || user.role == 'moderator')
+              if (user.role == 'admin' || user.role == 'moderator') ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: OutlinedButton.icon(
@@ -113,6 +113,14 @@ class ProfileScreen extends ConsumerWidget {
                       icon: const Icon(Icons.admin_panel_settings_outlined),
                       label: const Text('Admin · Verification queue')),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton.icon(
+                      onPressed: () => context.push('/admin/ads'),
+                      icon: const Icon(Icons.campaign_outlined),
+                      label: const Text('Admin · Ad review')),
+                ),
+              ],
               const SizedBox(height: 16),
               const Divider(),
               Padding(

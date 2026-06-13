@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/ads/admin_ads_screen.dart';
+import '../../features/ads/ads_manager_screen.dart';
+import '../../features/ads/create_campaign_screen.dart';
 import '../../features/auth/auth_providers.dart';
 import '../../features/auth/sign_in_screen.dart';
 import '../../features/create/create_hub_screen.dart';
 import '../../features/discover/discover_screen.dart';
+import '../../features/live/host_live_screen.dart';
+import '../../features/live/live_discovery_screen.dart';
+import '../../features/live/live_viewer_screen.dart';
 import '../../features/feed/composer_screen.dart';
 import '../../features/feed/home_feed_screen.dart';
 import '../../features/feed/post_detail_screen.dart';
@@ -68,6 +74,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/chat/:cid',
           builder: (_, s) => ChatScreen(cid: s.pathParameters['cid']!)),
+
+      // Live streaming (P3)
+      GoRoute(path: '/live', builder: (_, __) => const LiveDiscoveryScreen()),
+      GoRoute(path: '/live/host', builder: (_, __) => const HostLiveScreen()),
+      GoRoute(
+          path: '/live/:id',
+          builder: (_, s) => LiveViewerScreen(streamId: s.pathParameters['id']!)),
+
+      // Advertising (P3)
+      GoRoute(path: '/ads', builder: (_, __) => const AdsManagerScreen()),
+      GoRoute(path: '/ads/new', builder: (_, __) => const CreateCampaignScreen()),
+      GoRoute(path: '/admin/ads', builder: (_, __) => const AdminAdsScreen()),
 
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => RootShell(shell: shell),

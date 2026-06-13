@@ -26,5 +26,16 @@ export { paystackWebhook } from "./billing/paystackWebhook";
 export { flutterwaveWebhook } from "./billing/flutterwaveWebhook";
 export { getVerificationDocUrl } from "./admin/getVerificationDocUrl";
 
+// Live streaming (P3)
+export { createLiveStream } from "./live/createLiveStream";
+export { joinLiveStream } from "./live/joinLiveStream";
+export { endLiveStream, leaveLiveStream } from "./live/endLiveStream";
+
+// Advertising (P3)
+export { initializeAdPayment } from "./ads/initializeAdPayment";
+export { approveCampaign } from "./ads/approveCampaign";
+export { meterAdEvent } from "./ads/meterAdEvent";
+
 // AI proxy
 export { aiAssist } from "./ai/aiAssist";
+export { generateImage } from "./ai/generateImage";

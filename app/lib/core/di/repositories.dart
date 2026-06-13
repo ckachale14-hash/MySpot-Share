@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/repositories/ad_repository.dart';
 import '../../data/repositories/admin_repository.dart';
 import '../../data/repositories/billing_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
+import '../../data/repositories/live_repository.dart';
 import '../../data/repositories/journey_repository.dart';
 import '../../data/repositories/media_service.dart';
 import '../../data/repositories/notification_repository.dart';
@@ -63,3 +65,17 @@ final conversationRepositoryProvider = Provider<ConversationRepository>(
 
 final presenceServiceProvider =
     Provider<PresenceService>((ref) => PresenceService(ref.watch(databaseProvider)));
+
+final liveRepositoryProvider = Provider<LiveRepository>(
+  (ref) => LiveRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(functionsProvider),
+  ),
+);
+
+final adRepositoryProvider = Provider<AdRepository>(
+  (ref) => AdRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(functionsProvider),
+  ),
+);

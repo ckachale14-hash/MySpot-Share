@@ -43,6 +43,11 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
         title: const Text(AppConfig.appName),
         actions: [
           IconButton(
+            tooltip: 'Live',
+            onPressed: () => context.push('/live'),
+            icon: const Icon(Icons.live_tv_outlined),
+          ),
+          IconButton(
             onPressed: () => context.push('/notifications'),
             icon: Badge(
               isLabelVisible: unread > 0,
