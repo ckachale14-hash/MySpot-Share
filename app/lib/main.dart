@@ -5,14 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // On Android/iOS the native google-services config provides defaults.
-  // Recommended: run `flutterfire configure` to generate firebase_options.dart,
-  // then pass `options: DefaultFirebaseOptions.currentPlatform` here.
-  await Firebase.initializeApp();
+  // Uses committed placeholder options until you run `flutterfire configure`,
+  // which regenerates firebase_options.dart with your real project config.
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // App Check gates the backend (callables enforce it). Debug providers are used
   // in debug builds; switch to Play Integrity / DeviceCheck for release.

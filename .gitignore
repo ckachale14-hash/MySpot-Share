@@ -49,8 +49,8 @@ serviceAccountKey*.json
 # macOS
 .DS_Store
 
-# Generated Firebase options (regenerate via flutterfire configure)
-**/firebase_options.dart
+# firebase_options.dart is committed as a placeholder; `flutterfire configure`
+# overwrites it locally with your real (public) config.
 
 # Flutter app (lives in app/)
 app/.dart_tool/
