@@ -1,0 +1,46 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+*.g.dart.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Android
+android/app/google-services.json
+android/key.properties
+android/app/upload-keystore.jks
+*.keystore
+
+# iOS
+ios/Runner/GoogleService-Info.plist
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Pods/
+ios/.symlinks/
+
+# Firebase / secrets
+.firebaserc.local
+firebase-debug.log
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.env.*
+.env
+.env.*
+serviceAccountKey*.json
+
+# macOS
+.DS_Store
+
+# Generated Firebase options (regenerate via flutterfire configure)
+lib/firebase_options.dart

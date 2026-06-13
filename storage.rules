@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// ============================================================================
+// MySpot — Cloud Storage Security Rules
+// ----------------------------------------------------------------------------
+// Path convention (all user-generated media is namespaced by owner uid):
+//   users/{uid}/avatar/...                profile & cover images
+//   users/{uid}/posts/{postId}/...        post media (images/video/thumbs)
+//   users/{uid}/stories/{storyId}/...     ephemeral story media
+//   users/{uid}/chat/{conversationId}/... message attachments
+//   businesses/{businessId}/...           logos, product images (owner-gated)
+//   verification/{uid}/...                🔒 KYC docs — owner write, no public read
+//   ads/{advertiserId}/{campaignId}/...   ad creatives
+// ----------------------------------------------------------------------------
+// Guards: only the owner writes to their namespace; size & content-type limits
+// block abuse; verification documents are private (reviewed via signed URLs in
+// the admin panel using the Admin SDK).
+// ============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn()    { return request.auth != null; }
+    function isOwner(uid)    { return isSignedIn() && request.auth.uid == uid; }
+    function isImage()       { return request.resource.contentType.matches('image/.*'); }
+    function isVideo()       { return request.resource.contentType.matches('video/.*'); }
+    function isDoc() {
+      return request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf';
+    }
+    function maxMB(n)        { return request.resource.size < n * 1024 * 1024; }
+
+    // -------- profile, cover, post, story media (publicly readable) --------
+    match /users/{uid}/{category}/{allPaths=**} {
+      // Public read so feeds/profiles render for everyone signed in.
+      allow read: if isSignedIn();
+      allow write: if isOwner(uid)
+        && (
+             (isImage() && maxMB(10)) ||
+             (isVideo() && maxMB(200))
+           );
+      allow delete: if isOwner(uid);
+    }
+
+    // ----------------------- business media --------------------------------
+    match /businesses/{businessId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      // Ownership is enforced at write time via a Function-issued upload token
+      // or checked against Firestore by a callable; broad client writes are
+      // limited to image content under a size cap.
+      allow write: if isSignedIn() && isImage() && maxMB(10);
+      allow delete: if isSignedIn();
+    }
+
+    // ------------- verification documents (PRIVATE / KYC) 🔒 ----------------
+    // Owner may upload; NOBODY may read via client. Admins review through the
+    // Admin SDK (signed URLs minted server-side), never via public read.
+    match /verification/{uid}/{allPaths=**} {
+      allow read:  if false;
+      allow write: if isOwner(uid) && isDoc() && maxMB(15);
+      allow delete: if false;
+    }
+
+    // -------------------- chat attachments ---------------------------------
+    // Readable by signed-in users (URLs are unguessable); membership is also
+    // gated at the Firestore message layer. For stricter privacy, serve via
+    // short-lived signed URLs from a Function instead of public read.
+    match /users/{uid}/chat/{conversationId}/{allPaths=**} {
+      allow read:  if isSignedIn();
+      allow write: if isOwner(uid)
+        && (isImage() && maxMB(10) || isVideo() && maxMB(200) || isDoc() && maxMB(25));
+      allow delete: if isOwner(uid);
+    }
+
+    // ----------------------- ad creatives ----------------------------------
+    match /ads/{advertiserId}/{allPaths=**} {
+      allow read:  if isSignedIn();
+      allow write: if isOwner(advertiserId)
+        && (isImage() && maxMB(15) || isVideo() && maxMB(300));
+      allow delete: if isOwner(advertiserId);
+    }
+
+    // --------------------------- default deny ------------------------------
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

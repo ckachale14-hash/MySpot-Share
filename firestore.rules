@@ -1,0 +1,323 @@
+rules_version = '2';
+
+// ============================================================================
+// MySpot — Cloud Firestore Security Rules
+// ----------------------------------------------------------------------------
+// Trust model:
+//   • Clients may CRUD their own public content within tight field constraints.
+//   • "Server-only" fields (verified, premium, role, all *Count, payment/sub
+//     state, moderation flags) are NEVER client-writable. Cloud Functions use
+//     the Admin SDK, which bypasses these rules, to mutate them.
+//   • Money, verification, roles, and ranking are decided server-side only.
+// Notes:
+//   • App Check enforcement is configured per-resource in the console/Functions;
+//     these rules assume an authenticated, attested client.
+//   • Rules cannot validate everything (e.g. business logic) — they are the
+//     last line of defense, complemented by Functions and App Check.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------- helpers --------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function hasRole(role) {
+      return isSignedIn() && request.auth.token.role == role;
+    }
+    function isAdmin()     { return hasRole('admin'); }
+    function isModerator() { return hasRole('admin') || hasRole('moderator'); }
+
+    // True if the incoming update does not touch any of `fields`.
+    function untouched(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+    // True if the incoming write only sets keys within `allowed`.
+    function onlyKeys(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    // =========================== users ====================================
+    match /users/{uid} {
+      allow read: if isSignedIn();
+
+      // On create the user may not grant themselves privileges or counters.
+      allow create: if isUser(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.verified == false
+        && request.resource.data.premium == false
+        && request.resource.data.role == 'user'
+        && request.resource.data.followerCount == 0
+        && request.resource.data.followingCount == 0
+        && request.resource.data.postCount == 0;
+
+      // Owner edits profile fields only; server-only fields must be unchanged.
+      allow update: if isUser(uid)
+        && untouched([
+             'verified','premium','role',
+             'followerCount','followingCount','postCount','isNewUser'
+           ]);
+
+      allow delete: if false; // account deletion handled by a Function
+
+      // PII / tokens — owner read; writes are Functions-only.
+      match /private/{doc} {
+        allow read:  if isUser(uid);
+        allow write: if false;
+      }
+
+      // Personal notifications — owner reads; may only flip `read`.
+      match /notifications/{notifId} {
+        allow read:   if isUser(uid);
+        allow update: if isUser(uid) && onlyKeys(['read']);
+        allow create, delete: if false; // Functions create; user keeps history
+      }
+
+      // Saved posts (private bookmarks).
+      match /saved/{postId} {
+        allow read, write: if isUser(uid);
+      }
+
+      // Home-feed fan-out view & FYP signals — server-maintained.
+      match /home/{postId}      { allow read: if isUser(uid); allow write: if false; }
+      match /interests/{signal} { allow read: if isUser(uid); allow write: if false; }
+    }
+
+    // unique @handle reservations — created/maintained by a Function
+    match /handles/{handle} {
+      allow read:  if isSignedIn();
+      allow write: if false;
+    }
+
+    // ========================= businesses =================================
+    match /businesses/{businessId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.verified == false
+        && request.resource.data.get('ratingCount', 0) == 0;
+      allow update: if isSignedIn()
+        && resource.data.ownerId == request.auth.uid
+        && untouched(['verified','ratingAvg','ratingCount','followerCount','ownerId']);
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      // one review per user; aggregates maintained by a Function
+      match /reviews/{reviewerUid} {
+        allow read:   if isSignedIn();
+        allow create, update: if isUser(reviewerUid)
+          && request.resource.data.rating is number
+          && request.resource.data.rating >= 1
+          && request.resource.data.rating <= 5;
+        allow delete: if isUser(reviewerUid) || isModerator();
+      }
+    }
+
+    // =========================== posts ====================================
+    match /posts/{postId} {
+      allow read: if isSignedIn(); // visibility/follower gating refined in queries + Functions
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.likeCount == 0
+        && request.resource.data.commentCount == 0
+        && request.resource.data.shareCount == 0
+        && request.resource.data.get('removed', false) == false
+        && request.resource.data.get('isSponsored', false) == false;
+
+      // Author may edit body/visibility only; counters, score, moderation server-only.
+      allow update: if isSignedIn()
+        && resource.data.authorId == request.auth.uid
+        && untouched([
+             'authorId','likeCount','commentCount','shareCount','saveCount',
+             'viewCount','score','isSponsored','removed','createdAt'
+           ]);
+
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isModerator());
+
+      // like edge: presence at /likes/{uid} == liked
+      match /likes/{likeUid} {
+        allow read:   if isSignedIn();
+        allow create, delete: if isUser(likeUid);
+        allow update: if false;
+      }
+
+      // comments
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.get('likeCount', 0) == 0;
+        allow update: if isSignedIn()
+          && resource.data.authorId == request.auth.uid
+          && untouched(['authorId','likeCount','createdAt']);
+        allow delete: if isSignedIn()
+          && (resource.data.authorId == request.auth.uid
+              || get(/databases/$(database)/documents/posts/$(postId)).data.authorId == request.auth.uid
+              || isModerator());
+      }
+    }
+
+    // ====================== founder journeys ⭐ ===========================
+    match /founderJourneys/{journeyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.get('featured', false) == false;
+      allow update: if isSignedIn()
+        && resource.data.authorId == request.auth.uid
+        && untouched(['authorId','featured','likeCount','saveCount','viewCount','createdAt']);
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isModerator());
+    }
+
+    // =========================== stories ==================================
+    match /stories/{storyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.expiresAt is timestamp;
+      allow update: if false; // ephemeral & immutable
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isModerator());
+
+      match /views/{viewerUid} {
+        allow read:   if isSignedIn();
+        allow create: if isUser(viewerUid);
+        allow update, delete: if false;
+      }
+    }
+
+    // =========================== follows ==================================
+    // doc id MUST be "<followerUid>_<followingUid>"
+    match /follows/{edgeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.followerId == request.auth.uid
+        && edgeId == request.auth.uid + '_' + request.resource.data.followingId;
+      allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
+      allow update: if false;
+    }
+
+    // ======================== conversations ===============================
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.memberIds;
+      // members may update title/last-read but not rewrite membership wholesale
+      allow update: if isSignedIn() && request.auth.uid in resource.data.memberIds;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberIds;
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid
+          && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberIds;
+        allow update: if isSignedIn()
+          && onlyKeys(['readBy']); // mark-as-read only
+        allow delete: if isSignedIn()
+          && resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // ==================== verification (paid) =============================
+    match /verificationRequests/{requestId} {
+      allow read: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || isModerator());
+      // User may open a request; status is pinned to pending_payment.
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending_payment'
+        && !request.resource.data.keys().hasAny(['paymentId','reviewerId','reviewNote']);
+      // All transitions (paid → review → approved/rejected) are Functions-only.
+      allow update, delete: if false;
+    }
+
+    // ============== payments & subscriptions (server-owned) ===============
+    match /payments/{paymentId} {
+      allow read:  if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false; // webhook Functions only
+    }
+    match /subscriptions/{uid} {
+      allow read:  if isUser(uid) || isAdmin();
+      allow write: if false; // RevenueCat/Stripe webhook Functions only
+    }
+
+    // =========================== advertising ==============================
+    match /adCampaigns/{campaignId} {
+      allow read: if isSignedIn()
+        && (resource.data.advertiserId == request.auth.uid || isModerator());
+      allow create: if isSignedIn()
+        && request.resource.data.advertiserId == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.get('metrics', {}).get('spent', 0) == 0;
+      // advertiser may edit a draft; status/metrics/spend are server-only.
+      allow update: if isSignedIn()
+        && resource.data.advertiserId == request.auth.uid
+        && resource.data.status in ['draft','rejected']
+        && untouched(['status','metrics','paymentId','advertiserId']);
+      allow delete: if isSignedIn()
+        && resource.data.advertiserId == request.auth.uid
+        && resource.data.status == 'draft';
+
+      match /ads/{adId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn()
+          && get(/databases/$(database)/documents/adCampaigns/$(campaignId)).data.advertiserId == request.auth.uid
+          && (request.method == 'delete'
+              || request.resource.data.get('status','draft') in ['draft','pending_review']);
+      }
+    }
+
+    // ========================= live streams ===============================
+    match /liveStreams/{streamId} {
+      allow read: if isSignedIn();
+      // host creates the doc; agoraChannel/status managed by Functions tokens
+      allow create: if isSignedIn()
+        && request.resource.data.hostId == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.hostId == request.auth.uid
+        && untouched(['agoraChannel','viewerCount','peakViewers']);
+      allow delete: if false;
+
+      match /chat/{msgId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isModerator();
+      }
+    }
+
+    // =========================== moderation ===============================
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow read, update: if isModerator();
+      allow delete: if false;
+    }
+    match /adminAudit/{eventId} {
+      allow read:  if isAdmin();
+      allow write: if false; // Functions only
+    }
+
+    // ===================== read-mostly aggregates =========================
+    match /hashtags/{tag}      { allow read: if isSignedIn(); allow write: if false; }
+    match /counters/{doc}      { allow read: if isSignedIn(); allow write: if false; }
+
+    // referral codes: owner reads their own; attribution writes via Function
+    match /referrals/{code} {
+      allow read:  if isSignedIn();
+      allow write: if false;
+    }
+
+    // ----------------------- default deny ---------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
