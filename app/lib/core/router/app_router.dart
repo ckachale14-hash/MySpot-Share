@@ -9,6 +9,7 @@ import '../../features/auth/auth_providers.dart';
 import '../../features/auth/sign_in_screen.dart';
 import '../../features/create/create_hub_screen.dart';
 import '../../features/discover/discover_screen.dart';
+import '../../features/invite/invite_screen.dart';
 import '../../features/live/host_live_screen.dart';
 import '../../features/live/live_discovery_screen.dart';
 import '../../features/live/live_viewer_screen.dart';
@@ -61,6 +62,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/u/:uid',
           builder: (_, s) => UserProfileScreen(uid: s.pathParameters['uid']!)),
+
+      GoRoute(path: '/invite', builder: (_, __) => const InviteScreen()),
 
       // Monetization (P2)
       GoRoute(path: '/verify', builder: (_, __) => const VerificationScreen()),

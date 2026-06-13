@@ -121,6 +121,13 @@ class ProfileScreen extends ConsumerWidget {
                       label: const Text('Admin · Ad review')),
                 ),
               ],
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: OutlinedButton.icon(
+                    onPressed: () => context.push('/invite'),
+                    icon: const Icon(Icons.group_add_outlined),
+                    label: const Text('Invite friends')),
+              ),
               const SizedBox(height: 16),
               const Divider(),
               Padding(
