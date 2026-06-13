@@ -21,6 +21,22 @@
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "stories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorId", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "hashtags", "arrayConfig": "CONTAINS" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
@@ -137,7 +153,8 @@
       "fieldPath": "expiresAt",
       "ttl": true,
       "indexes": [
-        { "order": "ASCENDING", "queryScope": "COLLECTION" }
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" }
       ]
     }
   ]

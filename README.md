@@ -47,10 +47,16 @@ architecture review. It is the blueprint the engineering team builds from.
 - [`storage.rules`](storage.rules) — Storage security rules
 - [`firestore.indexes.json`](firestore.indexes.json) — composite indexes for the feed/FYP/search queries
 
-**Phase P0 scaffold (runnable):** [`app/`](app) (Flutter — auth → onboarding → 5-tab
-shell), [`functions/`](functions) (TypeScript — auth provisioning + OpenAI AI proxy,
-`tsc` clean), [`test/`](test) (Firestore rules tests, passing), CI in
-[`.github/workflows`](.github/workflows). **Start here → [`SETUP.md`](SETUP.md).**
+**Scaffold (runnable) — P0 + P1 social core:** [`app/`](app) (Flutter) and
+[`functions/`](functions) (TypeScript, `tsc` clean), [`test/`](test) (Firestore
+rules tests — **13 passing**), CI in [`.github/workflows`](.github/workflows).
+**Start here → [`SETUP.md`](SETUP.md).**
+- **P0:** auth (email + Google) → onboarding (handle claim) → 5-tab shell · profile.
+- **P1 social core:** posts (text + image + AI-assist) · For-You feed · likes ·
+  saves · comments · follow + public profiles · stories (24h) · founder journeys ·
+  discover (people / trending / journeys / search) · notifications (in-app + FCM).
+  Engagement counters, hashtag trending, and notifications run on Firestore-trigger
+  Cloud Functions.
 
 ---
 

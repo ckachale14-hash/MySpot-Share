@@ -119,3 +119,57 @@ describe("verification", () => {
     );
   });
 });
+
+describe("posts (P1)", () => {
+  it("author can create a public post with zeroed counters", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "posts/p1"), {
+        authorId: "alice",
+        type: "text",
+        text: "hello",
+        visibility: "public",
+      })
+    );
+  });
+
+  it("rejects a post that seeds its own ranking score", async () => {
+    await assertFails(
+      setDoc(doc(db("alice"), "posts/p2"), {
+        authorId: "alice",
+        visibility: "public",
+        score: 9999,
+      })
+    );
+  });
+
+  it("rejects a post authored as someone else", async () => {
+    await assertFails(
+      setDoc(doc(db("bob"), "posts/p3"), { authorId: "alice", visibility: "public" })
+    );
+  });
+});
+
+describe("likes (P1)", () => {
+  it("a user may like as themselves, not as others", async () => {
+    await seed("posts/p10", { authorId: "carol", visibility: "public" });
+    await assertSucceeds(setDoc(doc(db("alice"), "posts/p10/likes/alice"), {}));
+    await assertFails(setDoc(doc(db("alice"), "posts/p10/likes/bob"), {}));
+  });
+});
+
+describe("follows (P1)", () => {
+  it("edge id must match the follower; can't forge another's follow", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "follows/alice_bob"), {
+        followerId: "alice",
+        followingId: "bob",
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "follows/bob_carol"), {
+        followerId: "alice",
+        followingId: "carol",
+      })
+    );
+  });
+});

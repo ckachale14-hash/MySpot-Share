@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/widgets/async_value_widget.dart';
+import '../../core/widgets/post_card.dart';
 import '../../core/widgets/verified_badge.dart';
 import '../auth/auth_providers.dart';
+import '../feed/feed_providers.dart';
 import 'user_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -102,6 +104,13 @@ class ProfileScreen extends ConsumerWidget {
                       icon: const Icon(Icons.workspace_premium_outlined),
                       label: const Text('Go Premium (P2)')),
                 ),
+              const SizedBox(height: 16),
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text('My posts', style: t.textTheme.titleMedium),
+              ),
+              _MyPosts(uid: user.uid as String),
             ],
           );
         },
@@ -115,4 +124,21 @@ class ProfileScreen extends ConsumerWidget {
           Text(label, style: t.textTheme.bodySmall),
         ],
       );
+}
+
+class _MyPosts extends ConsumerWidget {
+  const _MyPosts({required this.uid});
+  final String uid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final posts = ref.watch(userPostsProvider(uid)).value ?? const [];
+    if (posts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text("You haven't posted yet."),
+      );
+    }
+    return Column(children: [for (final p in posts) PostCard(post: p)]);
+  }
 }

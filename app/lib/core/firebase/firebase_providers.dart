@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Single source for Firebase service instances so they can be overridden in tests.
@@ -12,3 +13,6 @@ final firestoreProvider =
 
 final functionsProvider =
     Provider<FirebaseFunctions>((_) => FirebaseFunctions.instance);
+
+final storageProvider =
+    Provider<FirebaseStorage>((_) => FirebaseStorage.instance);
