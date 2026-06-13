@@ -82,7 +82,7 @@ Profile ─► "Get Verified" ─► Verification intro (benefits, fee, requirem
    │
    ├─ Pay the fee
    │     • MOBILE  : RevenueCat / StoreKit / Play Billing   (store policy)
-   │     • WEB     : Stripe / Razorpay (hosted checkout)
+   │     • WEB     : Flutterwave / Paystack / Stripe (cards, bank, USSD, mobile money)
    │
    ├─ PROVIDER webhook ─► verifyPayment() ★
    │      • validate signature + amount + idempotency
@@ -181,7 +181,7 @@ Business ─► Ads Manager (in-app summary; full creation in web portal)
    ├─ Create campaign (objective, budget, schedule, targeting)
    │      └─ adCampaigns/{id}=draft
    ├─ Add creatives (feed/story/video/listing) ─► ads/{adId}
-   ├─ Fund campaign ─► Stripe/Razorpay (web)  ──► payments ★ ─► status=active
+   ├─ Fund campaign ─► Flutterwave/Paystack/Stripe (web)  ──► payments ★ ─► status=active
    ├─ Admin review ★ ─► active / rejected
    ├─ Serving: ranking layer inserts eligible active ads into feeds/stories
    │      └─ impressions/clicks metered ★ → metrics + spend (budget caps)
@@ -189,7 +189,7 @@ Business ─► Ads Manager (in-app summary; full creation in web portal)
 ```
 
 See the [monetization doc](07-monetization.md) on why **ad spend uses
-Stripe/Razorpay via the web portal**, not in-app IAP.
+Flutterwave/Paystack/Stripe via the web portal**, not in-app IAP.
 
 ---
 

@@ -11,14 +11,26 @@ policy**. Read §4 carefully; it has killed many social apps in review.
 
 | Stream | What | Who pays | Channel |
 |--------|------|----------|---------|
-| **Verification** | Blue tick for users & businesses | individuals, businesses | mobile: IAP · web: Stripe/Razorpay |
-| **Premium subscription** | Pro / Business plans (analytics, visibility, AI quotas, badge) | power users, businesses | mobile: IAP · web: Stripe |
-| **Advertising** | Sponsored posts, story ads, video ads, sponsored listings, boosts | advertisers/businesses | **web/portal: Stripe/Razorpay** |
-| **AI add-ons** | Higher AI quotas, image/video generation | creators, businesses | bundled in premium; overage via portal |
+| **Verification** | Blue tick for users & businesses | individuals, businesses | mobile: IAP · web: Flutterwave/Paystack/Stripe + mobile money |
+| **Premium subscription** | Pro / Business plans (analytics, visibility, AI quotas, badge) | power users, businesses | mobile: IAP · web: mobile money / cards |
+| **Sponsored advertising** | Feed/story/video ads, boosts, targeting | advertisers/businesses | **web/portal: Flutterwave/Paystack/Stripe** |
+| **Featured business listings** | Top placement in the Business Directory & category pages (daily/weekly/monthly slots) | businesses | web/portal · mobile money |
+| **AI credits** | Prepaid credit packs for AI writing/image/video beyond plan quota | creators, businesses | mobile: IAP consumable · web: mobile money |
 | **Future** | Marketplace/transaction fees, lead-gen, events/tickets, recruiting | various | various |
 
+**AI Credits model:** each AI action consumes credits priced to **cover model
+cost + margin** (text cheap, image mid, video expensive). Plans include a monthly
+credit allowance; users buy top-up packs when they run out. Credits are a
+server-only balance on `subscriptions/{uid}` (or a `credits/{uid}` doc),
+decremented atomically by the `aiAssist`/`generateImage`/`generateVideo`
+functions. This converts variable AI cost into prepaid revenue and caps runaway spend.
+
+**Featured listings** are funded slots that the directory/ranking layer surfaces
+first (clearly labeled), sold by placement × duration × category demand — a high-margin,
+inventory-style product that complements impression-based ads.
+
 > "Advertising payments and the verification fee should go directly into the
-> company account" — handled by routing to your Stripe/Razorpay account
+> company account" — handled by routing to your Flutterwave/Paystack/Stripe account
 > (web/B2B) and your developer payout account (IAP), reconciled in the
 > `payments` ledger and admin **Revenue** dashboard.
 
@@ -29,7 +41,7 @@ policy**. Read §4 carefully; it has killed many social apps in review.
 | | **Free** | **Pro** | **Business** |
 |---|---|---|---|
 | Post / connect / message | ✅ | ✅ | ✅ |
-| AI writing assistant | basic quota (Haiku/Sonnet) | high quota | highest + Opus long-form |
+| AI writing assistant | basic quota (mini/standard) | high quota | highest + flagship long-form |
 | AI image generation | — | limited | included |
 | Verified badge | add-on (one-time/period fee) | included | included |
 | Analytics & business insights | — | advanced | advanced + audience |
@@ -37,7 +49,7 @@ policy**. Read §4 carefully; it has killed many social apps in review.
 | Ads manager | — | self-serve | self-serve + team |
 | Support | community | priority | priority |
 
-Price by market (e.g. India via Razorpay/UPI at localized price points; global
+Price by market (e.g. Kenya via M-Pesa, Nigeria via Paystack at localized price points; global
 via Stripe/IAP). Keep prices in Remote Config + store products.
 
 ---
@@ -66,8 +78,8 @@ in-app digital goods can get the app **rejected or removed**.
 | Item | Nature | Mobile channel | Web channel |
 |------|--------|----------------|-------------|
 | Premium subscription | in-app digital service | **IAP (RevenueCat)** ✅ required | Stripe (web sign-up) |
-| Verification badge | in-app digital service | **IAP** ✅ required | Stripe/Razorpay (web) |
-| **Advertising spend** | purchase of advertising / B2B service | **web advertiser portal (Stripe/Razorpay)** | ✅ |
+| Verification badge | in-app digital service | **IAP** ✅ required | Flutterwave/Paystack/Stripe (web) |
+| **Advertising spend** | purchase of advertising / B2B service | **web advertiser portal (Flutterwave/Paystack/Stripe)** | ✅ |
 | AI add-ons sold standalone | in-app digital service | **IAP** | Stripe |
 
 Why advertising can use external billing: buying **ads/promotion** is a
@@ -81,7 +93,7 @@ in-app purchases via IAP.
 **Implementation guardrails:**
 - Use **RevenueCat** to abstract StoreKit/Play and unify entitlements + webhooks.
 - Mobile app: **no external payment links** for premium/verification.
-- Web: full Stripe/Razorpay for advertiser portal and (optionally) web sign-ups.
+- Web: full Flutterwave/Paystack/Stripe for advertiser portal and (optionally) web sign-ups.
 - Honor recent external-link allowances (e.g. reader/anti-steering changes)
   **only** after legal/policy review per platform and region — don't design the
   core flow around them.
@@ -138,7 +150,7 @@ data-driven, not guesses.
 ## 8. Phasing (aligns with [roadmap](08-roadmap.md))
 
 1. **P2:** Verification (IAP + web) + premium (IAP) + ledger + admin revenue view.
-2. **P3:** Advertising portal (Stripe/Razorpay) + ad serving + AI add-ons.
+2. **P3:** Advertising portal (Flutterwave/Paystack/Stripe) + ad serving + AI add-ons.
 3. **P4:** Marketplace/transaction fees, audience insights, advanced ad targeting.
 
 Stand up the **payment ledger and webhook verification early** — it underpins

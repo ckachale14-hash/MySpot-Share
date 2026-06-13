@@ -6,36 +6,53 @@ well-isolated client SDK. Vendor choices and model IDs are injected via
 
 ---
 
-## 1. Payments
+## 1. Payments (Africa-first)
 
 Two payment surfaces with **different rules** — this distinction is the single
 most important compliance decision in the app (see [07 Monetization](07-monetization.md)).
+Because MySpot launches in Africa, **mobile money is a first-class rail**, not an
+afterthought, and Android is the dominant platform.
 
 | Surface | Provider | Used for | Why |
 |---------|----------|----------|-----|
-| **In-app (mobile)** | **RevenueCat** → StoreKit (iOS) / Play Billing (Android) | Premium subscriptions, verification badge | Apple/Google require their billing for **in-app digital goods/services** |
-| **Web / advertiser portal** | **Stripe** (global) + **Razorpay** (India: cards, UPI, netbanking) | Ad spend, B2B billing, web verification | Real-world/advertising spend purchased outside the app store context |
+| **In-app (mobile)** | **RevenueCat** → Play Billing (Android) / StoreKit (iOS) | Premium subscriptions, verification badge, AI credits | Google/Apple require their billing for **in-app digital goods/services** |
+| **Web / advertiser portal** | **Flutterwave** + **Paystack** (cards, bank, USSD, **mobile money**: M-Pesa, MTN MoMo, Airtel) + **Stripe** (global cards) | Ad spend, featured listings, B2B billing, **web purchase of premium/verification via mobile money** | Pan-African coverage + the web rail lets mobile-money users pay outside the app store |
+
+> **Mobile-money nuance (important):** many target users pay with M-Pesa/MoMo, not
+> a card on file in the Play Store. Google Play *does* require Play Billing for
+> in-app digital goods, but purchases made **outside** the app (on the MySpot
+> website/PWA) may use Flutterwave/Paystack mobile money. The recommended pattern:
+> offer **both** — Play Billing in-app for convenience, and a **web checkout with
+> mobile money** for everyone else — and validate per-market against current Play
+> policy. Advertising/featured-listing spend (B2B) always goes through the **web
+> portal** on Flutterwave/Paystack/Stripe.
 
 ### Integration shape (always webhook-verified)
 ```
 Client initiates purchase
-  → provider hosted checkout / native sheet
+  → provider hosted checkout / native sheet / mobile-money STK push
   → provider WEBHOOK ─► Cloud Function:
-        • verify signature (Stripe-Signature / X-Razorpay-Signature / RC auth)
+        • verify signature (Stripe-Signature / verif-hash / Paystack sig / RC auth)
         • idempotency on providerRef
-        • write payments/{id} (server-only ledger)
-        • grant entitlement (subscriptions/{uid}, verified flag) + custom claim
+        • write payments/{id} (server-only ledger, with currency)
+        • grant entitlement (subscriptions/{uid}, verified flag, credits) + claim
         • notify user
 ```
 - **Never** trust a client "payment succeeded" callback to grant entitlements —
-  always the webhook.
-- **RevenueCat** unifies StoreKit/Play receipts and emits a single webhook +
+  always the webhook. (Mobile-money flows are async: the STK push completes
+  out-of-band, so the webhook is the *only* source of truth.)
+- **RevenueCat** unifies Play/StoreKit receipts and emits a single webhook +
   entitlement model; its webhook is the source of truth for mobile subs.
-- Secrets (`STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`, `RAZORPAY_KEY/SECRET`,
-  `REVENUECAT_WEBHOOK_AUTH`) live in Secret Manager.
+- **Flutterwave/Paystack** webhooks confirm card/bank/USSD/mobile-money charges;
+  verify the signature/hash and re-query the provider's verify endpoint before granting.
+- Store **multi-currency** amounts (KES, NGN, GHS, ZAR, USD…) in the ledger.
+- Secrets (`STRIPE_SECRET`, `STRIPE_WEBHOOK_SECRET`, `FLUTTERWAVE_SECRET`,
+  `FLUTTERWAVE_WEBHOOK_HASH`, `PAYSTACK_SECRET`, `REVENUECAT_WEBHOOK_AUTH`) live
+  in Secret Manager.
 
-Flutter packages: `purchases_flutter` (RevenueCat), `flutter_stripe`
-(web/portal or supported flows), Razorpay web checkout for the advertiser portal.
+Flutter packages: `purchases_flutter` (RevenueCat), Flutterwave/Paystack mobile
+SDKs or hosted checkout (WebView) for the web/portal flows, `flutter_stripe`
+where global cards are needed.
 
 ---
 
@@ -59,35 +76,34 @@ video: `video_player`/`chewie` for playback, `mux_player`/HLS for transcoded.
 
 ## 3. AI services
 
-All AI runs **server-side** through Cloud Functions. The Anthropic/Vertex keys
+All AI runs **server-side** through Cloud Functions. The OpenAI/Vertex keys
 never ship in the client. Quotas differ by plan (free vs Pro vs Business).
 
-### 3.1 Writing assistant (text) — Anthropic **Claude**, tiered
+### 3.1 Writing assistant (text) — **OpenAI**, tiered
 
 Pick the model **by task and plan** to balance quality vs cost. Exact model IDs
-are set in **Remote Config / env** (`ANTHROPIC_MODEL_FAST` / `_STANDARD` /
-`_PREMIUM`) — not hardcoded — so upgrades are config-only.
+are set in **Remote Config / env** (`AI_MODEL_FAST` / `_STANDARD` / `_PREMIUM`)
+— not hardcoded — so upgrades are config-only.
 
 | Task | Tier | Rationale |
 |------|------|-----------|
-| Grammar/spelling fix, short caption, quick tone tweak | **Claude Haiku** | Cheapest & fastest; high volume |
-| Improve/rewrite a post, generate captions, marketing snippets | **Claude Sonnet** | Best balance of quality & cost |
-| Long-form **business articles**, **founder-story drafting**, premium marketing copy | **Claude Opus** | Highest quality; premium-gated |
+| Grammar/spelling fix, short caption, quick tone tweak | **OpenAI mini** | Cheapest & fastest; high volume |
+| Improve/rewrite a post, generate captions, marketing snippets | **OpenAI standard** | Best balance of quality & cost |
+| Long-form **business articles**, **founder-story drafting**, premium marketing copy | **OpenAI flagship** | Highest quality; premium-gated |
 
 Implementation notes:
-- Use the official **`@anthropic-ai/sdk`** in Functions (Node/TS).
-- **Stream** long-form generations (`messages.stream()` + `finalMessage()`) so
-  long articles don't hit request timeouts; return progressively to the client.
-- Default `max_tokens` generously for articles (e.g. streaming, ~4–8k); small for
-  grammar fixes.
+- Use the official **`openai`** Node SDK in Functions (Node/TS).
+- **Stream** long-form generations (`stream: true`) so long articles don't hit
+  request timeouts; return progressively to the client.
+- Default `max_tokens` generously for articles (e.g. ~4–8k); small for grammar fixes.
 - Enforce **per-plan rate limits & monthly token budgets**; log usage/cost per
   user for billing and abuse detection.
-- **Moderate** AI output before returning (and user prompts before sending).
+- **Moderate** input & output (OpenAI's moderation endpoint is free) before returning.
 - Representative callable in [10 Cloud Functions §aiAssist](10-cloud-functions.md#5-ai-proxy).
 
-> Current recommended Claude tiers map to Anthropic's **Haiku / Sonnet / Opus**
-> families. Keep the precise IDs in Remote Config and review them periodically as
-> Anthropic ships newer models — the function code never needs to change.
+> The tiers map to OpenAI's small / standard / flagship model families. Keep the
+> precise model IDs in Remote Config and review them periodically as OpenAI ships
+> newer models — the function code never needs to change.
 
 ### 3.2 Image generation — **Vertex AI Imagen**
 Promotional images, business graphics, social content. Called from a Function
@@ -186,8 +202,8 @@ if you offer other social logins on iOS). 2FA is a future enhancement
 
 | Where | Holds |
 |-------|-------|
-| **Secret Manager** | Anthropic key, Stripe/Razorpay keys + webhook secrets, RevenueCat auth, Agora certificate, Algolia **admin** key, Mux/Branch keys |
+| **Secret Manager** | OpenAI key, Stripe/Flutterwave/Paystack keys + webhook secrets, RevenueCat auth, Agora certificate, Algolia **admin** key, Mux/Branch keys |
 | **Remote Config** | feature flags, AI model IDs/tiers, AI quotas, FYP weights, rollout gates |
-| **Client (safe)** | Firebase config, Algolia **search-only** key, Branch key, public Stripe/Razorpay publishable keys |
+| **Client (safe)** | Firebase config, Algolia **search-only** key, Branch key, public Stripe/Flutterwave/Paystack publishable keys |
 
 **Nothing private is ever committed to this repo or shipped in the app binary.**

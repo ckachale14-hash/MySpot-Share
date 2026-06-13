@@ -88,7 +88,8 @@ PII and tokens, readable **only** by the owner, writable **only** by Functions.
 | `email` | string | |
 | `phone` | string | |
 | `stripeCustomerId` | string | |
-| `razorpayCustomerId` | string | |
+| `paystackCustomerCode` | string | |
+| `flutterwaveRef` | string | mobile-money / card customer ref |
 | `revenueCatId` | string | |
 | `fcmTokens` | array<string> | push targets (deduped, pruned on send failure) |
 | `referredBy` | string | referral code used at signup |
@@ -264,7 +265,7 @@ Written **only** by webhook Functions. Never client-writable, never updated.
 | Field | Type | Notes |
 |-------|------|-------|
 | `userId` | string | |
-| `provider` | enum | `stripe` \| `razorpay` \| `revenuecat` \| `play` \| `appstore` |
+| `provider` | enum | `stripe` \| `flutterwave` \| `paystack` \| `revenuecat` \| `play` \| `appstore` |
 | `providerRef` | string | charge/order/transaction id (idempotency key) |
 | `purpose` | enum | `verification` \| `premium` \| `ad_spend` \| `boost` |
 | `amount` / `currency` | number / string | |

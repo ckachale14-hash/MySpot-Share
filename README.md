@@ -28,16 +28,29 @@ architecture review. It is the blueprint the engineering team builds from.
 | 03 | [Security Rules](docs/03-security-rules.md) | Firestore + Storage rule design, trust boundaries, custom claims |
 | 04 | [User Flows](docs/04-user-flows.md) | Auth, verification+payment, posting, FYP, messaging, live, ads, moderation |
 | 05 | [Screens & Navigation](docs/05-screens-and-navigation.md) | Screen inventory, navigation graph, design system |
-| 06 | [Integrations & APIs](docs/06-integrations.md) | Payments, AI (Claude/Vertex), live streaming, search, push, deep links |
+| 06 | [Integrations & APIs](docs/06-integrations.md) | Payments, AI (OpenAI/Vertex), live streaming, search, push, deep links |
 | 07 | [Monetization Strategy](docs/07-monetization.md) | Revenue streams, pricing, store-policy compliance, payout flows |
 | 08 | [Development Roadmap](docs/08-roadmap.md) | Phased plan, milestones, team shape, estimates, KPIs |
 | 09 | [Flutter App Architecture](docs/09-flutter-architecture.md) | Folder structure, state management, packages, conventions, sample code |
 | 10 | [Cloud Functions Catalog](docs/10-cloud-functions.md) | Server-side functions: payments, verification, FYP fan-out, AI proxy, notifications |
+| 11 | [Product Strategy](docs/11-product-strategy.md) | Vision, competitive moat, personas, growth & user-acquisition (Africa-first) |
+| 12 | [Recommendation Engine](docs/12-recommendation-engine.md) | FYP pipeline, scoring formula, cold-start, exploration, ML evolution |
+| 13 | [Live Streaming](docs/13-live-streaming.md) | Host/viewer/co-host, token security, chat/reactions, recording, replay, scale |
+| 14 | [Messaging](docs/14-messaging.md) | WhatsApp-like DMs/groups, media, read receipts, presence, scale |
+| 15 | [AI Integration](docs/15-ai-integration.md) | Writing, image, video, moderation, recommendations, credits & guardrails |
+| 16 | [Admin Panel](docs/16-admin-panel.md) | Web dashboard: users, verification, ads, revenue, analytics, moderation |
+| 17 | [Firebase Cost Estimates](docs/17-firebase-cost-estimates.md) | Cost drivers, model, ranges at 10K/100K/1M MAU, mitigations, guardrails |
+| 18 | [Scaling & Launch](docs/18-scaling-and-launch.md) | Enterprise scale playbook, regions/compliance, abuse, launch sequence |
 
 **Config artifacts** (real, ready to adapt):
-- [`firestore.rules`](firestore.rules) — production-shaped security rules
+- [`firestore.rules`](firestore.rules) — production-shaped security rules ✅ *unit-tested*
 - [`storage.rules`](storage.rules) — Storage security rules
 - [`firestore.indexes.json`](firestore.indexes.json) — composite indexes for the feed/FYP/search queries
+
+**Phase P0 scaffold (runnable):** [`app/`](app) (Flutter — auth → onboarding → 5-tab
+shell), [`functions/`](functions) (TypeScript — auth provisioning + OpenAI AI proxy,
+`tsc` clean), [`test/`](test) (Firestore rules tests, passing), CI in
+[`.github/workflows`](.github/workflows). **Start here → [`SETUP.md`](SETUP.md).**
 
 ---
 
@@ -55,9 +68,9 @@ architecture review. It is the blueprint the engineering team builds from.
 | Push | **Firebase Cloud Messaging** | Cross-platform notifications |
 | Anti-abuse | **Firebase App Check** + reCAPTCHA/DeviceCheck | Block scripted/abusive clients |
 | Search | **Algolia** (or Typesense) | Firestore can't do full-text/typo-tolerant search |
-| Payments (web/B2B) | **Stripe** + **Razorpay** | Global + India card/UPI; advertiser & web verification portal |
+| Payments (web/B2B) | **Flutterwave** + **Paystack** + **Stripe** | Pan-African cards/bank/USSD + **mobile money** (M-Pesa, MoMo, Airtel); global cards |
 | Payments (in-app) | **RevenueCat** + StoreKit/Play Billing | Store-policy-compliant subscriptions/verification on mobile |
-| AI — text | **Anthropic Claude** (tiered: Haiku → Sonnet → Opus) | Writing assistant, captions, articles, marketing copy |
+| AI — text | **OpenAI** (tiered: mini → standard → flagship) | Writing assistant, captions, articles, marketing copy |
 | AI — image | **Vertex AI Imagen** (Firebase AI Logic) | Promotional graphics, social content |
 | AI — video | **Vertex AI Veo** / Runway (premium-gated) | Short promo & motivational clips |
 | Live streaming | **Agora** (or 100ms/LiveKit) | Low-latency broadcast + live chat/reactions |
@@ -65,11 +78,12 @@ architecture review. It is the blueprint the engineering team builds from.
 | Admin panel | **Flutter Web** on Firebase Hosting | Reuse models/code; gated by `admin` custom claim |
 | Observability | **Crashlytics + Analytics + Performance** | Stability, funnels, perf |
 
-> **Note on AI model IDs:** exact Claude/Vertex model identifiers are kept out of
+> **Note on AI model IDs:** exact OpenAI/Vertex model identifiers are kept out of
 > source and injected via **Remote Config / environment variables** (see
 > [docs/06](docs/06-integrations.md) and [docs/10](docs/10-cloud-functions.md)).
-> This lets you upgrade models without shipping a new build. The current
-> recommended Claude tiers (Haiku / Sonnet / Opus) are described in those docs.
+> This lets you upgrade models without shipping a new build. The recommended
+> OpenAI tiers (a cheap "mini" → a "standard" → a "flagship" for long-form) are
+> described in those docs.
 
 ---
 

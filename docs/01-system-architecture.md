@@ -36,8 +36,8 @@
         │  (Functions call out / vendors call back via webhooks)
 ┌───────┴───────────────────────────────────────────────────────────────┐
 │                      EXTERNAL SERVICES                                   │
-│  Anthropic Claude (text)     Vertex AI Imagen/Veo (image/video)         │
-│  Stripe + Razorpay (B2B/web payments)   RevenueCat (mobile subs/IAP)    │
+│  OpenAI (text + images)      Vertex AI Imagen/Veo (optional)            │
+│  Flutterwave / Paystack / Stripe (web)   RevenueCat (mobile subs/IAP)   │
 │  Agora/100ms (live streaming)   Algolia (search)                        │
 │  Mux/Cloudflare Stream (video transcode/CDN)   Branch (deep links)      │
 └───────────────────────────────────────────────────────────────────────┘
@@ -75,7 +75,7 @@ Firestore + Storage handle the **CRUD + realtime** path directly from the client
 |---------|----------------------------|
 | Payment capture & verification | Never trust the client that money arrived; verify via webhook signatures |
 | Granting verified/premium/role | Privilege escalation must be impossible from the client |
-| AI proxying (Claude/Vertex) | API keys must never ship in the app; enforce quotas & moderation |
+| AI proxying (OpenAI/Vertex) | API keys must never ship in the app; enforce quotas & moderation |
 | Feed fan-out & FYP ranking | Aggregation/heavy reads; keep clients thin |
 | Counters & trending | Atomic, abuse-resistant aggregation |
 | Notifications | Authorized senders only; templating + FCM tokens |
@@ -83,7 +83,7 @@ Firestore + Storage handle the **CRUD + realtime** path directly from the client
 
 Function trigger types used:
 - **HTTPS Callable** — client-invoked actions (start verification, run AI assistant, create ad).
-- **HTTPS (raw)** — third-party **webhooks** (Stripe/Razorpay/RevenueCat, Mux, Agora tokens).
+- **HTTPS (raw)** — third-party **webhooks** (Stripe/Flutterwave/Paystack/RevenueCat, Mux, Agora tokens).
 - **Firestore triggers** — `onCreate`/`onUpdate`/`onWrite` for fan-out, counters, moderation, search sync.
 - **Scheduled (Pub/Sub)** — trending recompute, story expiry sweeps, digest notifications.
 - **Auth triggers** — provision user docs on sign-up; cleanup on delete.
@@ -108,7 +108,7 @@ User composes post
 ```
 User taps "Get Verified"
   → callable startVerification(): create verificationRequests/{id} = pending_payment
-  → client opens payment (RevenueCat/IAP on mobile · Stripe/Razorpay on web)
+  → client opens payment (RevenueCat/IAP on mobile · Flutterwave/Paystack/Stripe + mobile money on web)
   → PROVIDER webhook → Function verifyPayment():
        • validate signature & amount
        • write payments/{id} (server-only)
@@ -127,8 +127,8 @@ The client can **request** but never **grant** verification. See
 User writes draft + selects "Improve / Rewrite / Generate article"
   → callable aiAssist({ task, text, tone }):
        • App Check + auth + rate-limit + quota (free vs premium)
-       • pick Claude tier by task & plan (Haiku/Sonnet/Opus via Remote Config)
-       • call Anthropic API (key in Secret Manager) — stream long-form
+       • pick model tier by task & plan (mini/standard/flagship via Remote Config)
+       • call OpenAI API (key in Secret Manager) — stream long-form
        • moderate output, log usage/cost, return text
 ```
 Keys never touch the device. Premium unlocks higher tiers & higher quotas
@@ -154,7 +154,7 @@ Host taps "Go Live"
 
 - **Three Firebase projects:** `myspot-dev`, `myspot-staging`, `myspot-prod`
   (isolation of data, keys, billing). FlutterFire flavors map to each.
-- **Secrets** (Anthropic, Stripe, Razorpay, Agora, Algolia admin) in **Cloud
+- **Secrets** (OpenAI, Stripe, Flutterwave, Paystack, Agora, Algolia admin) in **Cloud
   Secret Manager**, referenced by Functions — never in client or repo.
 - **Remote Config** holds feature flags, AI model IDs/tiers, quotas, and
   rollout gates.
@@ -179,7 +179,7 @@ Host taps "Go Live"
    (or AppsFlyer) + native App/Universal Links. Do not design around Dynamic Links.
 2. **In-app digital goods must use native IAP** (Apple/Google policy). Verification
    badges and premium subscriptions are sold via **StoreKit/Play Billing (RevenueCat)**
-   on mobile; the **advertiser/web portal** uses Stripe/Razorpay. [07](07-monetization.md)
+   on mobile; the **advertiser/web portal** uses Flutterwave/Paystack/Stripe. [07](07-monetization.md)
    covers the compliance line in detail.
 3. **Firestore is the source of truth, not a search/recommendation engine.**
    Search → Algolia; ranking → dedicated ranking functions/services.

@@ -62,7 +62,7 @@ in CI.
 
 **Goal:** the business model works end-to-end and safely.
 
-- **Payment ledger + webhook verification** (Stripe/Razorpay/RevenueCat) — build
+- **Payment ledger + webhook verification** (Flutterwave/Paystack/Stripe/RevenueCat) — build
   first; it underpins everything.
 - **Verification flow** (KYC upload → pay → review → grant) with the
   payment-before-review state machine.
@@ -81,10 +81,10 @@ in CI.
 - **Messaging:** 1:1 + group, media/files, read receipts, push.
 - **Live streaming:** Agora host/viewer, server token minting, live chat,
   viewer counts, optional VOD.
-- **AI writing assistant:** Claude-tiered (Haiku/Sonnet/Opus) via Functions;
+- **AI writing assistant:** OpenAI-tiered (mini/standard/flagship) via Functions;
   improve/rewrite/grammar/caption/article + "write my founder story"; per-plan
   quotas & moderation.
-- **Advertising:** web Ads Manager portal (Stripe/Razorpay), creatives, review,
+- **Advertising:** web Ads Manager portal (Flutterwave/Paystack/Stripe), creatives, review,
   feed/story ad serving, metrics & budget caps.
 - **Invite/referrals:** Branch deferred deep links + attribution.
 

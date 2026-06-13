@@ -28,9 +28,16 @@ ios/Flutter/Flutter.podspec
 ios/Pods/
 ios/.symlinks/
 
+# Node (functions, rules tests, tooling) — any depth
+node_modules/
+npm-debug.log*
+
 # Firebase / secrets
 .firebaserc.local
 firebase-debug.log
+*-debug.log
+firebase-export-*/
+.firebase/
 functions/node_modules/
 functions/lib/
 functions/.env
@@ -43,4 +50,15 @@ serviceAccountKey*.json
 .DS_Store
 
 # Generated Firebase options (regenerate via flutterfire configure)
-lib/firebase_options.dart
+**/firebase_options.dart
+
+# Flutter app (lives in app/)
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/android/app/google-services.json
+app/android/key.properties
+app/android/app/upload-keystore.jks
+app/ios/Runner/GoogleService-Info.plist
+app/pubspec.lock

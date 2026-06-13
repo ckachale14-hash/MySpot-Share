@@ -15,7 +15,7 @@ functions/
 │   ├── stories/                 # expiry backstop sweep
 │   ├── messaging/               # onMessageCreate (lastMessage, unread, push)
 │   ├── verification/            # startVerification, approveVerification
-│   ├── payments/                # stripeWebhook, razorpayWebhook, revenueCatWebhook
+│   ├── payments/                # stripeWebhook, flutterwaveWebhook, paystackWebhook, revenueCatWebhook
 │   ├── ads/                     # submitCampaign, approveAd, meterAdEvent
 │   ├── live/                    # createLiveStream, joinLiveStream, endLiveStream
 │   ├── ai/                      # aiAssist, generateImage, generateVideo
@@ -58,14 +58,14 @@ functions/
 | Function | Trigger | Does |
 |----------|---------|------|
 | `startVerification` | Callable | create `verificationRequests/{id}=pending_payment` (App Check + auth) |
-| `stripeWebhook` / `razorpayWebhook` / `revenueCatWebhook` | HTTPS | **verify signature**, idempotency on `providerRef`, append `payments/{id}`, advance verification to `in_review` / grant subscription + claims, notify |
+| `stripeWebhook` / `flutterwaveWebhook` / `paystackWebhook` / `revenueCatWebhook` | HTTPS | **verify signature/hash**, idempotency on `providerRef`, append `payments/{id}`, advance verification to `in_review` / grant subscription + claims, notify |
 | `approveVerification` | Callable (admin) | set `users/{uid}.verified=true` + claim, `adminAudit`, notify (only from `in_review`) |
 
 ### 5. AI proxy
 | Function | Trigger | Does |
 |----------|---------|------|
-| `aiAssist` | Callable | text writing assistant — tiered Claude by task/plan, quota + moderation |
-| `generateImage` | Callable | Vertex AI Imagen → Storage → attach to draft (premium) |
+| `aiAssist` | Callable | text writing assistant — tiered **OpenAI** by task/plan, quota + moderation |
+| `generateImage` | Callable | OpenAI image (or Vertex Imagen) → Storage → attach to draft (premium) |
 | `generateVideo` | Callable | Vertex AI Veo async job → Mux (premium) |
 
 ### 6. Advertising
@@ -94,28 +94,28 @@ functions/
 
 ---
 
-## Representative: `aiAssist` (writing assistant)
+## Representative: `aiAssist` (writing assistant, OpenAI)
 
 Keys and model IDs are **server-side only**. Models are chosen by task & plan and
 read from environment/Remote Config — **no model ID is hardcoded**, so upgrading
-the underlying Claude model is a config change, not a code change.
+the underlying model is a config change, not a code change.
 
 ```ts
 // functions/src/ai/aiAssist.ts
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { assertWithinQuota, logAiUsage } from "../lib/quota";
 import { moderate } from "../moderation/moderateContent";
 
-const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 // Tier → env var holding the concrete model id (set per environment / Remote Config).
-// e.g. ANTHROPIC_MODEL_FAST, ANTHROPIC_MODEL_STANDARD, ANTHROPIC_MODEL_PREMIUM
+// e.g. AI_MODEL_FAST, AI_MODEL_STANDARD, AI_MODEL_PREMIUM
 const MODEL_BY_TIER = {
-  fast:     () => process.env.ANTHROPIC_MODEL_FAST!,      // grammar / short caption
-  standard: () => process.env.ANTHROPIC_MODEL_STANDARD!,  // rewrite / generate post
-  premium:  () => process.env.ANTHROPIC_MODEL_PREMIUM!,   // long-form article / journey
+  fast:     () => process.env.AI_MODEL_FAST!,      // grammar / short caption (cheap "mini")
+  standard: () => process.env.AI_MODEL_STANDARD!,  // rewrite / generate post
+  premium:  () => process.env.AI_MODEL_PREMIUM!,   // long-form article / journey (flagship)
 };
 
 // Map the requested task + the user's plan to a model tier.
@@ -128,7 +128,7 @@ function pickTier(task: string, plan: string): keyof typeof MODEL_BY_TIER {
 }
 
 export const aiAssist = onCall(
-  { secrets: [ANTHROPIC_API_KEY], enforceAppCheck: true },
+  { secrets: [OPENAI_API_KEY], enforceAppCheck: true },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
@@ -137,10 +137,18 @@ export const aiAssist = onCall(
     if (!task || !text) throw new HttpsError("invalid-argument", "task and text required.");
 
     const plan = (req.auth?.token.plan as string) ?? "free";
-    await assertWithinQuota(uid, plan, task);           // per-plan rate/budget limits
-    await moderate(text);                                // screen the prompt
+    await assertWithinQuota(uid, plan, task);            // per-plan rate/budget limits
 
-    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+    const client = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
+
+    // Screen the prompt (OpenAI moderation endpoint is free).
+    const flaggedIn = await client.moderations.create({
+      model: process.env.AI_MODERATION_MODEL!, input: text,
+    });
+    if (flaggedIn.results[0]?.flagged) {
+      throw new HttpsError("failed-precondition", "Input violates content policy.");
+    }
+
     const tier = pickTier(task, plan);
     const isLongForm = task === "article" || task === "founder_story";
 
@@ -150,19 +158,27 @@ export const aiAssist = onCall(
       (tone ? `Tone: ${tone}. ` : "") +
       "Never invent facts the user didn't provide.";
 
-    // Stream long-form generations to avoid request timeouts; collect the final text.
-    const stream = client.messages.stream({
+    // Non-streaming for short tasks; stream long-form to the client to avoid timeouts.
+    const completion = await client.chat.completions.create({
       model: MODEL_BY_TIER[tier](),
       max_tokens: isLongForm ? 6000 : 1200,
-      system,
-      messages: [{ role: "user", content: buildPrompt(task, text) }],
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: buildPrompt(task, text) },
+      ],
     });
-    const message = await stream.finalMessage();
 
-    const out = message.content.find((b) => b.type === "text")?.text ?? "";
-    await moderate(out);                                  // screen the output
-    await logAiUsage(uid, tier, message.usage);          // cost/usage accounting
+    const out = completion.choices[0]?.message?.content ?? "";
 
+    // Screen the output too.
+    const flaggedOut = await client.moderations.create({
+      model: process.env.AI_MODERATION_MODEL!, input: out,
+    });
+    if (flaggedOut.results[0]?.flagged) {
+      throw new HttpsError("internal", "Generated content failed moderation.");
+    }
+
+    await logAiUsage(uid, tier, completion.usage);       // cost/usage accounting
     return { text: out };
   }
 );
@@ -180,11 +196,14 @@ function buildPrompt(task: string, text: string): string {
 }
 ```
 
+> For real-time UX on long articles, switch the call to `stream: true` and pipe
+> chunks to the client (HTTPS streaming endpoint or chunked callable). For the
+> P3 build, non-streaming with a generous `max_tokens` is fine to start.
+
 Key points:
 - `enforceAppCheck: true` blocks non-app callers.
 - **Quotas/budgets** per plan (free vs Pro vs Business) prevent cost runaway.
-- **Moderation** on both prompt and output.
-- **Streaming** for long-form (per SDK guidance for large `max_tokens`).
+- **Moderation** on both prompt and output (OpenAI moderation is free).
 - **Usage logging** feeds billing/abuse analytics.
 - Premium plans get the higher-quality tier and larger quotas — the monetization
   lever from [07](07-monetization.md).

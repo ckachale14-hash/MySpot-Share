@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "myspot-dev",
+    "dev": "myspot-dev",
+    "staging": "myspot-staging",
+    "prod": "myspot-prod"
+  }
+}
