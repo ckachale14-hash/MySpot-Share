@@ -11,12 +11,14 @@ import '../../features/feed/home_feed_screen.dart';
 import '../../features/feed/post_detail_screen.dart';
 import '../../features/journeys/journey_detail_screen.dart';
 import '../../features/journeys/journey_editor_screen.dart';
+import '../../features/messaging/chat_screen.dart';
+import '../../features/messaging/conversations_screen.dart';
+import '../../features/messaging/new_message_screen.dart';
 import '../../features/monetization/admin_verification_screen.dart';
 import '../../features/monetization/premium_screen.dart';
 import '../../features/monetization/verification_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/profile_setup_screen.dart';
-import '../../features/placeholder/placeholder_screens.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/user_providers.dart';
 import '../../features/shell/root_shell.dart';
@@ -61,6 +63,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: '/admin/verifications',
           builder: (_, __) => const AdminVerificationScreen()),
 
+      // Messaging (P3)
+      GoRoute(path: '/messages/new', builder: (_, __) => const NewMessageScreen()),
+      GoRoute(
+          path: '/chat/:cid',
+          builder: (_, s) => ChatScreen(cid: s.pathParameters['cid']!)),
+
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => RootShell(shell: shell),
         branches: [
@@ -74,7 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/create', builder: (_, __) => const CreateHubScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
+            GoRoute(path: '/messages', builder: (_, __) => const ConversationsScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),

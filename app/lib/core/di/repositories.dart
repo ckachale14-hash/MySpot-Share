@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/admin_repository.dart';
 import '../../data/repositories/billing_repository.dart';
+import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/journey_repository.dart';
 import '../../data/repositories/media_service.dart';
 import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/post_repository.dart';
+import '../../data/repositories/presence_service.dart';
 import '../../data/repositories/social_repository.dart';
 import '../../data/repositories/story_repository.dart';
 import '../../data/repositories/verification_repository.dart';
@@ -54,3 +56,10 @@ final adminRepositoryProvider = Provider<AdminRepository>(
     ref.watch(functionsProvider),
   ),
 );
+
+final conversationRepositoryProvider = Provider<ConversationRepository>(
+  (ref) => ConversationRepository(ref.watch(firestoreProvider)),
+);
+
+final presenceServiceProvider =
+    Provider<PresenceService>((ref) => PresenceService(ref.watch(databaseProvider)));

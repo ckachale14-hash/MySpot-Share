@@ -15,6 +15,9 @@ export { onLikeWrite } from "./engagement/onLikeWrite";
 export { onCommentCreate, onCommentDelete } from "./engagement/onCommentWrite";
 export { onFollowWrite } from "./engagement/onFollowWrite";
 
+// Messaging (P3)
+export { onMessageCreate } from "./messaging/onMessageCreate";
+
 // Monetization (P2)
 export { startVerification } from "./verification/startVerification";
 export { approveVerification } from "./verification/approveVerification";

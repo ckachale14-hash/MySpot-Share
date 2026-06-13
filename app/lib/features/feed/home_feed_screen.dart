@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/di/repositories.dart';
 import '../../core/widgets/async_value_widget.dart';
 import '../../core/widgets/post_card.dart';
 import '../../features/notifications/push_service.dart';
@@ -22,9 +23,11 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   @override
   void initState() {
     super.initState();
-    // Register this device for push once we're in the app.
+    // Register this device for push and mark the user online once we're in the app.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(pushServiceProvider).registerCurrentDevice();
+      final uid = ref.read(authStateChangesProvider).value?.uid;
+      if (uid != null) ref.read(presenceServiceProvider).goOnline(uid);
     });
   }
 
