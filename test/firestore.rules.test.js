@@ -13,7 +13,7 @@ const {
   assertFails,
   assertSucceeds,
 } = require("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc } = require("firebase/firestore");
+const { doc, getDoc, setDoc, updateDoc, Timestamp } = require("firebase/firestore");
 
 let testEnv;
 
@@ -169,6 +169,81 @@ describe("follows (P1)", () => {
       setDoc(doc(db("alice"), "follows/bob_carol"), {
         followerId: "alice",
         followingId: "carol",
+      })
+    );
+  });
+});
+
+describe("comments (P1)", () => {
+  it("author must be the signer", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "posts/pc/comments/c1"), {
+        authorId: "alice",
+        text: "nice",
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "posts/pc/comments/c2"), {
+        authorId: "bob",
+        text: "spoofed",
+      })
+    );
+  });
+});
+
+describe("stories (P1)", () => {
+  it("requires authorId == signer and a timestamp expiry", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "stories/s1"), {
+        authorId: "alice",
+        type: "text",
+        text: "hi",
+        expiresAt: Timestamp.fromMillis(Date.now() + 86400000),
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "stories/s2"), {
+        authorId: "bob",
+        expiresAt: Timestamp.fromMillis(Date.now() + 86400000),
+      })
+    );
+  });
+});
+
+describe("founder journeys (P1)", () => {
+  it("author can publish; cannot self-feature", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "founderJourneys/j1"), {
+        authorId: "alice",
+        title: "From 0 to 1",
+        featured: false,
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "founderJourneys/j2"), {
+        authorId: "alice",
+        title: "Boosted",
+        featured: true,
+      })
+    );
+  });
+});
+
+describe("payment intents (P2)", () => {
+  it("owner reads own intent; others can't; clients never write", async () => {
+    await seed("paymentIntents/premium_alice_1", {
+      userId: "alice",
+      purpose: "premium",
+      status: "pending",
+    });
+    await assertSucceeds(
+      getDoc(doc(db("alice"), "paymentIntents/premium_alice_1"))
+    );
+    await assertFails(getDoc(doc(db("bob"), "paymentIntents/premium_alice_1")));
+    await assertFails(
+      setDoc(doc(db("alice"), "paymentIntents/forged"), {
+        userId: "alice",
+        status: "succeeded",
       })
     );
   });

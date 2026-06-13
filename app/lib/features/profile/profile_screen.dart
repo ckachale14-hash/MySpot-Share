@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/widgets/async_value_widget.dart';
 import '../../core/widgets/post_card.dart';
@@ -93,16 +94,24 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               if (!user.verified)
                 OutlinedButton.icon(
-                    onPressed: null,
+                    onPressed: () => context.push('/verify'),
                     icon: const Icon(Icons.verified_outlined),
-                    label: const Text('Get verified (P2)')),
+                    label: const Text('Get verified')),
               if (!user.premium)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: FilledButton.tonalIcon(
-                      onPressed: null,
+                      onPressed: () => context.push('/premium'),
                       icon: const Icon(Icons.workspace_premium_outlined),
-                      label: const Text('Go Premium (P2)')),
+                      label: const Text('Go Premium')),
+                ),
+              if (user.role == 'admin' || user.role == 'moderator')
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton.icon(
+                      onPressed: () => context.push('/admin/verifications'),
+                      icon: const Icon(Icons.admin_panel_settings_outlined),
+                      label: const Text('Admin · Verification queue')),
                 ),
               const SizedBox(height: 16),
               const Divider(),

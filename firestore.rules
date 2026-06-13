@@ -245,6 +245,10 @@ service cloud.firestore {
       allow read:  if isSignedIn() && resource.data.userId == request.auth.uid;
       allow write: if false; // webhook Functions only
     }
+    match /paymentIntents/{reference} {
+      allow read:  if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false; // initializePayment / webhooks only
+    }
     match /subscriptions/{uid} {
       allow read:  if isUser(uid) || isAdmin();
       allow write: if false; // RevenueCat/Stripe webhook Functions only

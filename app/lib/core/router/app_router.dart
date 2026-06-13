@@ -11,6 +11,9 @@ import '../../features/feed/home_feed_screen.dart';
 import '../../features/feed/post_detail_screen.dart';
 import '../../features/journeys/journey_detail_screen.dart';
 import '../../features/journeys/journey_editor_screen.dart';
+import '../../features/monetization/admin_verification_screen.dart';
+import '../../features/monetization/premium_screen.dart';
+import '../../features/monetization/verification_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/profile_setup_screen.dart';
 import '../../features/placeholder/placeholder_screens.dart';
@@ -50,6 +53,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/u/:uid',
           builder: (_, s) => UserProfileScreen(uid: s.pathParameters['uid']!)),
+
+      // Monetization (P2)
+      GoRoute(path: '/verify', builder: (_, __) => const VerificationScreen()),
+      GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
+      GoRoute(
+          path: '/admin/verifications',
+          builder: (_, __) => const AdminVerificationScreen()),
 
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => RootShell(shell: shell),

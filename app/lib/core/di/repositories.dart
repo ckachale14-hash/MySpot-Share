@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/repositories/admin_repository.dart';
+import '../../data/repositories/billing_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/journey_repository.dart';
 import '../../data/repositories/media_service.dart';
@@ -7,6 +9,7 @@ import '../../data/repositories/notification_repository.dart';
 import '../../data/repositories/post_repository.dart';
 import '../../data/repositories/social_repository.dart';
 import '../../data/repositories/story_repository.dart';
+import '../../data/repositories/verification_repository.dart';
 import '../firebase/firebase_providers.dart';
 
 final postRepositoryProvider =
@@ -29,3 +32,25 @@ final notificationRepositoryProvider = Provider<NotificationRepository>(
 
 final mediaServiceProvider =
     Provider<MediaService>((ref) => MediaService(ref.watch(storageProvider)));
+
+final verificationRepositoryProvider = Provider<VerificationRepository>(
+  (ref) => VerificationRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(storageProvider),
+    ref.watch(functionsProvider),
+  ),
+);
+
+final billingRepositoryProvider = Provider<BillingRepository>(
+  (ref) => BillingRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(functionsProvider),
+  ),
+);
+
+final adminRepositoryProvider = Provider<AdminRepository>(
+  (ref) => AdminRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(functionsProvider),
+  ),
+);

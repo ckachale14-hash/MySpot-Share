@@ -15,9 +15,13 @@ export { onLikeWrite } from "./engagement/onLikeWrite";
 export { onCommentCreate, onCommentDelete } from "./engagement/onCommentWrite";
 export { onFollowWrite } from "./engagement/onFollowWrite";
 
+// Monetization (P2)
+export { startVerification } from "./verification/startVerification";
+export { approveVerification } from "./verification/approveVerification";
+export { initializePayment } from "./billing/initializePayment";
+export { paystackWebhook } from "./billing/paystackWebhook";
+export { flutterwaveWebhook } from "./billing/flutterwaveWebhook";
+export { getVerificationDocUrl } from "./admin/getVerificationDocUrl";
+
 // AI proxy
 export { aiAssist } from "./ai/aiAssist";
-
-// Roadmap (wire up in later phases):
-// export { stripeWebhook } from "./payments/stripeWebhook";
-// export { createLiveStream } from "./live/createLiveStream";
