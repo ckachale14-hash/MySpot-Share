@@ -85,7 +85,7 @@ class _JourneyEditorScreenState extends ConsumerState<JourneyEditorScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _industry,
+            initialValue: _industry,
             decoration: const InputDecoration(labelText: 'Industry'),
             items: [
               for (final i in AppConfig.industries)
@@ -95,7 +95,7 @@ class _JourneyEditorScreenState extends ConsumerState<JourneyEditorScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<JourneyStage>(
-            value: _stage,
+            initialValue: _stage,
             decoration: const InputDecoration(labelText: 'Current stage'),
             items: [
               for (final s in JourneyStage.values)
@@ -117,7 +117,7 @@ class _JourneyEditorScreenState extends ConsumerState<JourneyEditorScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _currency,
+                  initialValue: _currency,
                   decoration: const InputDecoration(labelText: 'Currency'),
                   items: [
                     for (final c in _currencies)

@@ -38,9 +38,9 @@ class StoriesBar extends ConsumerWidget {
               onTap: () => context.push('/story/${a.uid}'),
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [Color(0xFF3D5AFE), Color(0xFFFF6D00)],
                   ),
                 ),

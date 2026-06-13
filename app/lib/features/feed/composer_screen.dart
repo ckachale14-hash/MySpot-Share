@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/repositories.dart';
 import '../../core/firebase/firebase_providers.dart';
+import '../../data/repositories/post_repository.dart';
 import '../../domain/entities/media_item.dart';
 import '../../domain/entities/post.dart';
 import '../auth/auth_providers.dart';

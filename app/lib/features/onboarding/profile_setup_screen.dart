@@ -80,7 +80,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<AccountType>(
-              value: _type,
+              initialValue: _type,
               decoration: const InputDecoration(labelText: 'Account type'),
               items: [
                 for (final a in AccountType.values)
@@ -90,7 +90,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _industry,
+              initialValue: _industry,
               decoration: const InputDecoration(labelText: 'Industry'),
               items: [
                 for (final i in AppConfig.industries)

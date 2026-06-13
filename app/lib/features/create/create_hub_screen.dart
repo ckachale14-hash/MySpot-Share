@@ -63,7 +63,7 @@ class _Tile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: scheme.surfaceContainerHighest.withOpacity(enabled ? 1 : 0.4),
+      color: scheme.surfaceContainerHighest.withValues(alpha: enabled ? 1 : 0.4),
       child: ListTile(
         enabled: enabled,
         leading: CircleAvatar(
