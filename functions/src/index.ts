@@ -18,6 +18,9 @@ export { onFollowWrite } from "./engagement/onFollowWrite";
 // Messaging (P3)
 export { onMessageCreate } from "./messaging/onMessageCreate";
 
+// Business directory
+export { onReviewWrite } from "./business/onReviewWrite";
+
 // Monetization (P2)
 export { startVerification } from "./verification/startVerification";
 export { approveVerification } from "./verification/approveVerification";

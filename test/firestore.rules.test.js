@@ -229,6 +229,50 @@ describe("founder journeys (P1)", () => {
   });
 });
 
+describe("businesses", () => {
+  it("owner creates unverified; cannot self-verify", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "businesses/b1"), {
+        ownerId: "alice",
+        name: "Acme",
+        verified: false,
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "businesses/b2"), {
+        ownerId: "alice",
+        name: "X",
+        verified: true,
+      })
+    );
+  });
+
+  it("owner cannot flip verified on update", async () => {
+    await seed("businesses/b3", {
+      ownerId: "alice",
+      name: "Acme",
+      verified: false,
+      ratingCount: 0,
+    });
+    await assertSucceeds(updateDoc(doc(db("alice"), "businesses/b3"), { description: "hi" }));
+    await assertFails(updateDoc(doc(db("alice"), "businesses/b3"), { verified: true }));
+  });
+});
+
+describe("business reviews", () => {
+  it("rating must be 1..5 and authored by the signer", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "businesses/b3/reviews/alice"), { rating: 5, text: "great" })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "businesses/b3/reviews/alice"), { rating: 6, text: "bad" })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "businesses/b3/reviews/bob"), { rating: 5 })
+    );
+  });
+});
+
 describe("payment intents (P2)", () => {
   it("owner reads own intent; others can't; clients never write", async () => {
     await seed("paymentIntents/premium_alice_1", {

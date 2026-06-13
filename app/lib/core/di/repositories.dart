@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/ad_repository.dart';
 import '../../data/repositories/admin_repository.dart';
 import '../../data/repositories/billing_repository.dart';
+import '../../data/repositories/business_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
 import '../../data/repositories/discovery_repository.dart';
 import '../../data/repositories/live_repository.dart';
@@ -78,4 +79,8 @@ final adRepositoryProvider = Provider<AdRepository>(
     ref.watch(firestoreProvider),
     ref.watch(functionsProvider),
   ),
+);
+
+final businessRepositoryProvider = Provider<BusinessRepository>(
+  (ref) => BusinessRepository(ref.watch(firestoreProvider)),
 );

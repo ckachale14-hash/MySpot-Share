@@ -42,6 +42,12 @@ class CreateHubScreen extends StatelessWidget {
             subtitle: 'Boost a post with an ad campaign',
             onTap: () => context.push('/ads'),
           ),
+          _Tile(
+            icon: Icons.add_business_outlined,
+            title: 'List a business',
+            subtitle: 'Create a business profile in the directory',
+            onTap: () => context.push('/business/new'),
+          ),
         ],
       ),
     );

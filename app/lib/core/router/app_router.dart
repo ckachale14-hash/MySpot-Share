@@ -7,6 +7,9 @@ import '../../features/ads/ads_manager_screen.dart';
 import '../../features/ads/create_campaign_screen.dart';
 import '../../features/auth/auth_providers.dart';
 import '../../features/auth/sign_in_screen.dart';
+import '../../features/business/business_directory_screen.dart';
+import '../../features/business/business_editor_screen.dart';
+import '../../features/business/business_profile_screen.dart';
 import '../../features/create/create_hub_screen.dart';
 import '../../features/discover/discover_screen.dart';
 import '../../features/invite/invite_screen.dart';
@@ -62,6 +65,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: '/u/:uid',
           builder: (_, s) => UserProfileScreen(uid: s.pathParameters['uid']!)),
+
+      // Business directory
+      GoRoute(path: '/businesses', builder: (_, __) => const BusinessDirectoryScreen()),
+      GoRoute(path: '/business/new', builder: (_, __) => const BusinessEditorScreen()),
+      GoRoute(
+          path: '/business/:id/edit',
+          builder: (_, s) =>
+              BusinessEditorScreen(businessId: s.pathParameters['id'])),
+      GoRoute(
+          path: '/b/:id',
+          builder: (_, s) => BusinessProfileScreen(id: s.pathParameters['id']!)),
 
       GoRoute(path: '/invite', builder: (_, __) => const InviteScreen()),
 

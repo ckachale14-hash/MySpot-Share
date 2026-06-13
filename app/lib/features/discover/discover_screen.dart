@@ -46,6 +46,19 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           ? _SearchResults(query: _query)
           : ListView(
               children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Card(
+                    elevation: 0,
+                    child: ListTile(
+                      leading: const Icon(Icons.storefront_outlined),
+                      title: const Text('Business directory'),
+                      subtitle: const Text('Discover & review businesses'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/businesses'),
+                    ),
+                  ),
+                ),
                 _heading(t, 'People you may know'),
                 _users(pymk),
                 _heading(t, 'New entrepreneurs'),
