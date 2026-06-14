@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/repositories.dart';
 import '../../core/widgets/live_video_surface.dart';
+import '../../domain/entities/live_stream.dart';
 import 'live_chat_panel.dart';
 import 'live_providers.dart';
+import 'live_stage.dart';
 
 class LiveViewerScreen extends ConsumerStatefulWidget {
   const LiveViewerScreen({super.key, required this.streamId});
@@ -15,13 +17,16 @@ class LiveViewerScreen extends ConsumerStatefulWidget {
 }
 
 class _LiveViewerScreenState extends ConsumerState<LiveViewerScreen> {
+  LiveCredentials? _creds;
+
   @override
   void initState() {
     super.initState();
     final repo = ref.read(liveRepositoryProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        await repo.joinLive(widget.streamId);
+        final creds = await repo.joinLive(widget.streamId);
+        if (mounted) setState(() => _creds = creds);
       } catch (_) {}
     });
   }
@@ -41,6 +46,7 @@ class _LiveViewerScreenState extends ConsumerState<LiveViewerScreen> {
   Widget build(BuildContext context) {
     final stream = ref.watch(liveStreamProvider(widget.streamId)).value;
     final ended = stream != null && stream.status != 'live';
+    final creds = _creds;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -48,10 +54,17 @@ class _LiveViewerScreenState extends ConsumerState<LiveViewerScreen> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: LiveVideoSurface(
-                  label: ended
-                      ? 'This stream has ended'
-                      : (stream?.host.displayName ?? 'Live')),
+              child: ended
+                  ? const LiveVideoSurface(label: 'This stream has ended')
+                  : (creds == null
+                      ? const LiveVideoSurface(label: 'Joining…')
+                      : LiveStage(
+                          appId: creds.appId,
+                          channel: creds.channel,
+                          token: creds.token,
+                          uid: creds.uid,
+                          host: false,
+                        )),
             ),
             Positioned(
               top: 12,

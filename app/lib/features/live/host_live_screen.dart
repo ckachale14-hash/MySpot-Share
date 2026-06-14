@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/di/repositories.dart';
-import '../../core/widgets/live_video_surface.dart';
+import '../../domain/entities/live_stream.dart';
 import 'live_chat_panel.dart';
 import 'live_providers.dart';
+import 'live_stage.dart';
 
 class HostLiveScreen extends ConsumerStatefulWidget {
   const HostLiveScreen({super.key});
@@ -15,7 +16,7 @@ class HostLiveScreen extends ConsumerStatefulWidget {
 
 class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
   final _title = TextEditingController();
-  String? _streamId;
+  LiveCredentials? _creds;
   bool _busy = false;
 
   @override
@@ -27,10 +28,9 @@ class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
   Future<void> _start() async {
     setState(() => _busy = true);
     try {
-      final creds = await ref
-          .read(liveRepositoryProvider)
-          .createLive(title: _title.text.trim().isEmpty ? 'Live' : _title.text.trim());
-      setState(() => _streamId = creds.streamId);
+      final creds = await ref.read(liveRepositoryProvider).createLive(
+          title: _title.text.trim().isEmpty ? 'Live' : _title.text.trim());
+      setState(() => _creds = creds);
     } catch (e) {
       _toast('$e');
     } finally {
@@ -39,7 +39,7 @@ class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
   }
 
   Future<void> _end() async {
-    final id = _streamId;
+    final id = _creds?.streamId;
     if (id != null) {
       try {
         await ref.read(liveRepositoryProvider).endLive(id);
@@ -56,8 +56,9 @@ class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_streamId == null) return _setup();
-    return _live(_streamId!);
+    final creds = _creds;
+    if (creds == null) return _setup();
+    return _live(creds);
   }
 
   Widget _setup() {
@@ -91,14 +92,22 @@ class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
     );
   }
 
-  Widget _live(String id) {
-    final stream = ref.watch(liveStreamProvider(id)).value;
+  Widget _live(LiveCredentials creds) {
+    final stream = ref.watch(liveStreamProvider(creds.streamId)).value;
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            const Positioned.fill(child: LiveVideoSurface(label: "You're live")),
+            Positioned.fill(
+              child: LiveStage(
+                appId: creds.appId,
+                channel: creds.channel,
+                token: creds.token,
+                uid: creds.uid,
+                host: true,
+              ),
+            ),
             Positioned(
               top: 12,
               left: 12,
@@ -140,7 +149,7 @@ class _HostLiveScreenState extends ConsumerState<HostLiveScreen> {
               right: 0,
               bottom: 0,
               height: MediaQuery.of(context).size.height * 0.45,
-              child: LiveChatPanel(streamId: id),
+              child: LiveChatPanel(streamId: creds.streamId),
             ),
           ],
         ),

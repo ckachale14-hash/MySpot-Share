@@ -69,6 +69,24 @@ In debug builds the app uses App Check **debug providers**. Register the debug
 token printed at first launch in the Firebase console (App Check → apps → manage
 debug tokens) so callables (`claimHandle`, `aiAssist`) accept the client.
 
+## 5b. Live streaming (Agora)
+
+Create an Agora project (console.agora.io) and set:
+
+```bash
+# functions/.env  (app id is public)
+AGORA_APP_ID=<your-agora-app-id>
+# secret (token signing)
+firebase functions:secrets:set AGORA_APP_CERTIFICATE
+```
+
+The app id is also needed client-side: the `createLiveStream`/`joinLiveStream`
+callables return it with the token, so no client config is required. On **web**
+live video shows a placeholder (Agora video renders on mobile via the conditional
+import in `features/live/live_stage.dart`). iOS camera/mic prompts use the
+Info.plist strings already added; if you gate on `permission_handler` results on
+iOS, add its camera/microphone macros to the generated `ios/Podfile` post-install.
+
 ## 6. Run
 
 ```bash
