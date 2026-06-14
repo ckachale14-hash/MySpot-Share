@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/ads/admin_ads_screen.dart';
 import '../../features/ads/ads_manager_screen.dart';
 import '../../features/ads/create_campaign_screen.dart';
+import '../../features/ai/ai_video_screen.dart';
 import '../../features/auth/auth_providers.dart';
 import '../../features/auth/sign_in_screen.dart';
 import '../../features/business/business_directory_screen.dart';
@@ -103,6 +104,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/ads', builder: (_, __) => const AdsManagerScreen()),
       GoRoute(path: '/ads/new', builder: (_, __) => const CreateCampaignScreen()),
       GoRoute(path: '/admin/ads', builder: (_, __) => const AdminAdsScreen()),
+
+      // AI video (P3)
+      GoRoute(path: '/ai/video', builder: (_, __) => const AiVideoScreen()),
 
       StatefulShellRoute.indexedStack(
         builder: (_, __, shell) => RootShell(shell: shell),

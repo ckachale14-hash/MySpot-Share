@@ -254,6 +254,12 @@ service cloud.firestore {
       allow write: if false; // RevenueCat/Stripe webhook Functions only
     }
 
+    // AI video generation jobs — owner reads; all writes are Functions-only.
+    match /videoJobs/{jobId} {
+      allow read:  if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
     // =========================== advertising ==============================
     match /adCampaigns/{campaignId} {
       allow read: if isSignedIn()

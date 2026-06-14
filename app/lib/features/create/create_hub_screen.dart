@@ -48,6 +48,12 @@ class CreateHubScreen extends StatelessWidget {
             subtitle: 'Create a business profile in the directory',
             onTap: () => context.push('/business/new'),
           ),
+          _Tile(
+            icon: Icons.movie_creation_outlined,
+            title: 'AI video',
+            subtitle: 'Generate a promo clip (Premium)',
+            onTap: () => context.push('/ai/video'),
+          ),
         ],
       ),
     );

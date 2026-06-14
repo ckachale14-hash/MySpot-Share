@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/ad_repository.dart';
 import '../../data/repositories/admin_repository.dart';
+import '../../data/repositories/ai_video_repository.dart';
 import '../../data/repositories/billing_repository.dart';
 import '../../data/repositories/business_repository.dart';
 import '../../data/repositories/conversation_repository.dart';
@@ -83,4 +84,11 @@ final adRepositoryProvider = Provider<AdRepository>(
 
 final businessRepositoryProvider = Provider<BusinessRepository>(
   (ref) => BusinessRepository(ref.watch(firestoreProvider)),
+);
+
+final aiVideoRepositoryProvider = Provider<AiVideoRepository>(
+  (ref) => AiVideoRepository(
+    ref.watch(firestoreProvider),
+    ref.watch(functionsProvider),
+  ),
 );

@@ -42,3 +42,5 @@ export { meterAdEvent } from "./ads/meterAdEvent";
 // AI proxy
 export { aiAssist } from "./ai/aiAssist";
 export { generateImage } from "./ai/generateImage";
+export { requestVideo } from "./ai/requestVideo";
+export { pollVideoJobs } from "./ai/pollVideoJobs";

@@ -292,3 +292,14 @@ describe("payment intents (P2)", () => {
     );
   });
 });
+
+describe("video jobs (AI)", () => {
+  it("owner reads own; others can't; clients never write", async () => {
+    await seed("videoJobs/v1", { userId: "alice", status: "queued" });
+    await assertSucceeds(getDoc(doc(db("alice"), "videoJobs/v1")));
+    await assertFails(getDoc(doc(db("bob"), "videoJobs/v1")));
+    await assertFails(
+      setDoc(doc(db("alice"), "videoJobs/forged"), { userId: "alice" })
+    );
+  });
+});
