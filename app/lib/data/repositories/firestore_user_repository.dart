@@ -41,4 +41,22 @@ class FirestoreUserRepository implements UserRepository {
       'onboardingComplete': true,
     });
   }
+
+  @override
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required AccountType accountType,
+    required String industry,
+    String bio = '',
+    String photoUrl = '',
+  }) async {
+    await _db.collection('users').doc(uid).update({
+      'displayName': displayName,
+      'accountType': accountType.id,
+      'industry': industry,
+      'bio': bio,
+      if (photoUrl.isNotEmpty) 'photoUrl': photoUrl,
+    });
+  }
 }

@@ -20,6 +20,7 @@ import '../../features/live/live_viewer_screen.dart';
 import '../../features/feed/composer_screen.dart';
 import '../../features/feed/home_feed_screen.dart';
 import '../../features/feed/post_detail_screen.dart';
+import '../../features/feed/saved_posts_screen.dart';
 import '../../features/journeys/journey_detail_screen.dart';
 import '../../features/journeys/journey_editor_screen.dart';
 import '../../features/messaging/chat_screen.dart';
@@ -31,6 +32,7 @@ import '../../features/monetization/premium_screen.dart';
 import '../../features/monetization/verification_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/profile_setup_screen.dart';
+import '../../features/profile/edit_profile_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/user_providers.dart';
 import '../../features/shell/root_shell.dart';
@@ -80,6 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (_, s) => BusinessProfileScreen(id: s.pathParameters['id']!)),
 
       GoRoute(path: '/invite', builder: (_, __) => const InviteScreen()),
+      GoRoute(path: '/profile/edit', builder: (_, __) => const EditProfileScreen()),
+      GoRoute(path: '/saved', builder: (_, __) => const SavedPostsScreen()),
 
       // Monetization (P2)
       GoRoute(path: '/verify', builder: (_, __) => const VerificationScreen()),

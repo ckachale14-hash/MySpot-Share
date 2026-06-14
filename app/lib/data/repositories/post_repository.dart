@@ -86,6 +86,31 @@ class PostRepository {
         : ref.delete();
   }
 
+  /// Hydrate the user's bookmarks (users/{uid}/saved) into full posts,
+  /// preserving save order and silently dropping any deleted posts.
+  Stream<List<Post>> watchSavedPosts(String uid, {int limit = 50}) => _db
+      .collection('users')
+      .doc(uid)
+      .collection('saved')
+      .orderBy('createdAt', descending: true)
+      .limit(limit)
+      .snapshots()
+      .asyncMap((q) async {
+        final ids = q.docs.map((d) => d.id).toList();
+        if (ids.isEmpty) return <Post>[];
+        final byId = <String, Post>{};
+        for (var i = 0; i < ids.length; i += 10) {
+          final end = (i + 10 > ids.length) ? ids.length : i + 10;
+          final snap = await _posts
+              .where(FieldPath.documentId, whereIn: ids.sublist(i, end))
+              .get();
+          for (final doc in snap.docs) {
+            byId[doc.id] = Post.fromDoc(doc);
+          }
+        }
+        return [for (final id in ids) if (byId[id] != null) byId[id]!];
+      });
+
   // ---- comments
   Stream<List<Comment>> watchComments(String postId) => _posts
       .doc(postId)

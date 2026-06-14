@@ -21,6 +21,11 @@ class ProfileScreen extends ConsumerWidget {
         title: const Text('Profile'),
         actions: [
           IconButton(
+            tooltip: 'Edit profile',
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () => context.push('/profile/edit'),
+          ),
+          IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(authRepositoryProvider).signOut(),
@@ -128,6 +133,13 @@ class ProfileScreen extends ConsumerWidget {
                       label: const Text('Admin · Reports')),
                 ),
               ],
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: OutlinedButton.icon(
+                    onPressed: () => context.push('/saved'),
+                    icon: const Icon(Icons.bookmark_border),
+                    label: const Text('Saved posts')),
+              ),
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: OutlinedButton.icon(

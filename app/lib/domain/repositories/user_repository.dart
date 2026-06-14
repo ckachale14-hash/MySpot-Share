@@ -15,4 +15,14 @@ abstract interface class UserRepository {
     required String industry,
     String bio,
   });
+
+  /// Edit profile fields (server-only fields are rejected by rules).
+  Future<void> updateProfile({
+    required String uid,
+    required String displayName,
+    required AccountType accountType,
+    required String industry,
+    String bio,
+    String photoUrl,
+  });
 }

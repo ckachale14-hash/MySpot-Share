@@ -31,3 +31,8 @@ final userPostsProvider =
     StreamProvider.autoDispose.family<List<Post>, String>(
   (ref, uid) => ref.watch(postRepositoryProvider).watchUserPosts(uid),
 );
+
+final savedPostsProvider =
+    StreamProvider.autoDispose.family<List<Post>, String>(
+  (ref, uid) => ref.watch(postRepositoryProvider).watchSavedPosts(uid),
+);
