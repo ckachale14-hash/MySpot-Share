@@ -3,6 +3,7 @@ import { defineSecret } from "firebase-functions/params";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../lib/admin";
 import { grantPremium, revokePremium } from "../lib/entitlements";
+import { fulfillPayment } from "../lib/fulfill";
 import { notify } from "../lib/notifications";
 
 const REVENUECAT_WEBHOOK_AUTH = defineSecret("REVENUECAT_WEBHOOK_AUTH");
@@ -24,6 +25,15 @@ function planFromEvent(event: Record<string, any>): string {
     event.product_id ||
     "";
   return String(ent).toLowerCase().includes("business") ? "business" : "pro";
+}
+
+/** A one-time verification fee purchase (product/entitlement id contains "verif"). */
+function isVerificationPurchase(event: Record<string, any>): boolean {
+  const ents = Array.isArray(event.entitlement_ids)
+    ? event.entitlement_ids.join(",")
+    : event.entitlement_id ?? "";
+  const haystack = `${event.product_id ?? ""} ${ents}`.toLowerCase();
+  return haystack.includes("verif");
 }
 
 /**
@@ -48,7 +58,27 @@ export const revenueCatWebhook = onRequest(
       return;
     }
 
-    if (GRANT.includes(type)) {
+    if (GRANT.includes(type) && isVerificationPurchase(event)) {
+      // One-time verification fee → advance the user's pending request to review
+      // (same ledger + transition as the web hosted-checkout webhooks).
+      const pending = await db
+        .collection("verificationRequests")
+        .where("userId", "==", uid)
+        .where("status", "==", "pending_payment")
+        .limit(1)
+        .get();
+      await fulfillPayment({
+        reference: `revenuecat_${event.id ?? Date.now()}`,
+        provider: "revenuecat",
+        amount: event.price_in_purchased_currency ?? 0,
+        currency: event.currency ?? "USD",
+        meta: {
+          userId: uid,
+          purpose: "verification",
+          relatedId: pending.empty ? null : pending.docs[0].id,
+        },
+      });
+    } else if (GRANT.includes(type)) {
       const reference = `revenuecat_${event.id ?? Date.now()}`;
       const plan = planFromEvent(event);
       const fresh = await db.runTransaction(async (tx) => {

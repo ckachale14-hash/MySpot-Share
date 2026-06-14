@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../core/config/app_config.dart';
@@ -55,5 +56,41 @@ class PurchasesService {
     if (target == null) return false;
     final customerInfo = await Purchases.purchasePackage(target);
     return customerInfo.entitlements.active.containsKey('premium');
+  }
+
+  /// Purchase the one-time verification fee. Returns true if the purchase
+  /// completed (false if cancelled or no verification product is configured).
+  /// The revenueCatWebhook moves the request to review on the server.
+  Future<bool> purchaseVerification() async {
+    if (!_configured) return false;
+    final pkg = await _findVerificationPackage();
+    if (pkg == null) return false;
+    try {
+      await Purchases.purchasePackage(pkg);
+      return true;
+    } on PlatformException catch (e) {
+      if (PurchasesErrorHelper.getErrorCode(e) ==
+          PurchasesErrorCode.purchaseCancelledError) {
+        return false;
+      }
+      rethrow;
+    }
+  }
+
+  /// Find a verification package across all offerings (id/product contains
+  /// "verif"). Verification is a non-renewing product, not an entitlement.
+  Future<Package?> _findVerificationPackage() async {
+    final offerings = await Purchases.getOfferings();
+    final candidates = <Package>[
+      ...?offerings.current?.availablePackages,
+      for (final o in offerings.all.values) ...o.availablePackages,
+    ];
+    for (final p in candidates) {
+      if (p.identifier.toLowerCase().contains('verif') ||
+          p.storeProduct.identifier.toLowerCase().contains('verif')) {
+        return p;
+      }
+    }
+    return null;
   }
 }

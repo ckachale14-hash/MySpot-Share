@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import '../../core/utils/open_url.dart';
 import '../../domain/entities/verification_request.dart';
 import '../auth/auth_providers.dart';
 import 'billing_providers.dart';
+import 'purchases_providers.dart';
 
 class VerificationScreen extends ConsumerStatefulWidget {
   const VerificationScreen({super.key});
@@ -44,12 +46,22 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 subjectId: uid,
                 documents: _docs,
               );
-      final url = await ref.read(billingRepositoryProvider).initializePayment(
-            purpose: 'verification',
-            relatedId: requestId,
-          );
-      await openUrl(url);
-      _toast('Complete payment in your browser — status updates here.');
+      if (kIsWeb) {
+        // Web: hosted checkout (card / mobile money).
+        final url = await ref.read(billingRepositoryProvider).initializePayment(
+              purpose: 'verification',
+              relatedId: requestId,
+            );
+        await openUrl(url);
+        _toast('Complete payment in your browser — status updates here.');
+      } else {
+        // Mobile: native in-app purchase (store policy for digital goods).
+        final ok =
+            await ref.read(purchasesServiceProvider).purchaseVerification();
+        _toast(ok
+            ? 'Payment submitted — your verification is under review.'
+            : 'In-app purchase unavailable or cancelled.');
+      }
       setState(() => _docs.clear());
     } catch (e) {
       _toast('$e');
@@ -93,7 +105,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                     Icon(Icons.verified, color: t.colorScheme.primary),
                     const SizedBox(width: 12),
                     const Expanded(child: Text('Verification fee')),
-                    Text('₦5,000', style: t.textTheme.titleMedium),
+                    Text(kIsWeb ? '₦5,000' : 'At checkout',
+                        style: t.textTheme.titleMedium),
                   ],
                 ),
               ),
@@ -133,7 +146,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Pay ₦5,000 & submit'),
+                  : const Text(
+                      kIsWeb ? 'Pay ₦5,000 & submit' : 'Submit & pay the fee'),
             ),
           ],
         ],

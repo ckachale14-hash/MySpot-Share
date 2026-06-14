@@ -94,6 +94,10 @@ premium is bought via RevenueCat (web uses Paystack hosted checkout).
 
 1. In RevenueCat: create the app, add Play/StoreKit subscription products, an
    **entitlement** named `premium`, and an Offering with `pro`/`business` packages.
+   For the paid verification badge, add a **non-renewing** product/package whose
+   id contains `verif` (e.g. `verification_fee`) — the webhook routes any
+   purchase whose product/entitlement id contains `verif` to verification
+   fulfillment (advances the user's pending request to review) instead of premium.
 2. Put the public SDK keys in `app/lib/core/config/app_config.dart`
    (`revenueCatIosKey` / `revenueCatAndroidKey`).
 3. Set the webhook: RevenueCat → Integrations → Webhooks → URL =

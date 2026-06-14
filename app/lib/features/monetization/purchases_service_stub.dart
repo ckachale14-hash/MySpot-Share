@@ -8,4 +8,5 @@ class PurchasesService {
   Future<void> identify(String uid) async {}
   Future<List<PurchasePackage>> packages() async => const [];
   Future<bool> purchase(String packageId) async => false;
+  Future<bool> purchaseVerification() async => false;
 }
