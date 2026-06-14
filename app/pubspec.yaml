@@ -43,6 +43,9 @@ dependencies:
   agora_rtc_engine: ^6.3.2
   permission_handler: ^11.3.1
 
+  # In-app purchases (mobile premium) — native; web uses a stub via conditional import
+  purchases_flutter: ^8.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

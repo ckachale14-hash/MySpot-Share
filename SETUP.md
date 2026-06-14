@@ -87,6 +87,24 @@ import in `features/live/live_stage.dart`). iOS camera/mic prompts use the
 Info.plist strings already added; if you gate on `permission_handler` results on
 iOS, add its camera/microphone macros to the generated `ios/Podfile` post-install.
 
+## 5c. In-app purchases (RevenueCat) — mobile premium
+
+App-store policy requires native billing for in-app digital goods, so on mobile
+premium is bought via RevenueCat (web uses Paystack hosted checkout).
+
+1. In RevenueCat: create the app, add Play/StoreKit subscription products, an
+   **entitlement** named `premium`, and an Offering with `pro`/`business` packages.
+2. Put the public SDK keys in `app/lib/core/config/app_config.dart`
+   (`revenueCatIosKey` / `revenueCatAndroidKey`).
+3. Set the webhook: RevenueCat → Integrations → Webhooks → URL =
+   `https://<region>-<project>.cloudfunctions.net/revenueCatWebhook`, with an
+   `Authorization: Bearer <token>` header; then
+   `firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH` to that token.
+
+The client triggers the purchase; the webhook is the source of truth that grants
+`premium` (mirrored to `subscriptions/{uid}` + custom claim). On web the keys stay
+`REPLACE_*` and IAP is simply disabled.
+
 ## 6. Run
 
 ```bash

@@ -35,3 +35,10 @@ export async function grantPremium(uid: string, plan: string, provider: string):
   await db.doc(`users/${uid}`).set({ premium: true }, { merge: true });
   await mergeClaims(uid, { premium: true, plan });
 }
+
+/** Revoke premium (cancellation / expiration). */
+export async function revokePremium(uid: string, status: string): Promise<void> {
+  await db.doc(`subscriptions/${uid}`).set({ status }, { merge: true });
+  await db.doc(`users/${uid}`).set({ premium: false }, { merge: true });
+  await mergeClaims(uid, { premium: false });
+}

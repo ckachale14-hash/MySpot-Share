@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'features/monetization/purchases_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -23,6 +24,11 @@ Future<void> main() async {
         kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
     appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
   );
+
+  // Configure in-app purchases (no-op on web / until RevenueCat keys are set).
+  try {
+    await PurchasesService().configure();
+  } catch (_) {}
 
   runApp(const ProviderScope(child: MySpotApp()));
 }

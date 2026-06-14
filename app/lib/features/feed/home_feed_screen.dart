@@ -8,6 +8,7 @@ import '../../core/widgets/async_value_widget.dart';
 import '../../core/widgets/post_card.dart';
 import '../../features/notifications/push_service.dart';
 import '../auth/auth_providers.dart';
+import '../monetization/purchases_providers.dart';
 import '../notifications/notification_providers.dart';
 import '../stories/stories_bar.dart';
 import 'feed_providers.dart';
@@ -27,7 +28,10 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(pushServiceProvider).registerCurrentDevice();
       final uid = ref.read(authStateChangesProvider).value?.uid;
-      if (uid != null) ref.read(presenceServiceProvider).goOnline(uid);
+      if (uid != null) {
+        ref.read(presenceServiceProvider).goOnline(uid);
+        ref.read(purchasesServiceProvider).identify(uid);
+      }
     });
   }
 

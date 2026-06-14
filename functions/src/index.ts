@@ -30,6 +30,7 @@ export { approveVerification } from "./verification/approveVerification";
 export { initializePayment } from "./billing/initializePayment";
 export { paystackWebhook } from "./billing/paystackWebhook";
 export { flutterwaveWebhook } from "./billing/flutterwaveWebhook";
+export { revenueCatWebhook } from "./billing/revenueCatWebhook";
 export { getVerificationDocUrl } from "./admin/getVerificationDocUrl";
 
 // Live streaming (P3)
