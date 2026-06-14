@@ -79,9 +79,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final uid = ref.watch(authStateChangesProvider).value?.uid ?? '';
     final conv = ref.watch(conversationProvider(widget.cid)).value;
     final messages = ref.watch(messagesProvider(widget.cid)).value ?? const [];
-    final other = conv?.other(uid);
+    final isGroup = conv?.isGroup ?? false;
+    final other = isGroup ? null : conv?.other(uid);
     final online =
         other == null ? false : ref.watch(onlineProvider(other.uid)).value ?? false;
+    final title = conv?.titleFor(uid) ?? 'Chat';
+    final subtitle = isGroup
+        ? '${conv?.memberIds.length ?? 0} members'
+        : (online ? 'Online' : 'Offline');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && uid.isNotEmpty) _maybeMarkRead(uid, messages);
@@ -92,10 +97,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(other?.displayName ?? 'Chat', style: t.textTheme.titleMedium),
-            Text(online ? 'Online' : 'Offline',
+            Text(title, style: t.textTheme.titleMedium),
+            Text(subtitle,
                 style: t.textTheme.bodySmall?.copyWith(
-                    color: online ? Colors.green : t.colorScheme.outline)),
+                    color: (!isGroup && online)
+                        ? Colors.green
+                        : t.colorScheme.outline)),
           ],
         ),
       ),
@@ -109,8 +116,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     reverse: true,
                     padding: const EdgeInsets.all(12),
                     itemCount: messages.length,
-                    itemBuilder: (_, i) =>
-                        _Bubble(message: messages[i], mine: messages[i].senderId == uid),
+                    itemBuilder: (_, i) {
+                      final m = messages[i];
+                      final mine = m.senderId == uid;
+                      return _Bubble(
+                        message: m,
+                        mine: mine,
+                        senderName: isGroup && !mine
+                            ? conv?.members[m.senderId]?.displayName
+                            : null,
+                      );
+                    },
                   ),
           ),
           SafeArea(
@@ -148,34 +164,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.mine});
+  const _Bubble({required this.message, required this.mine, this.senderName});
   final Message message;
   final bool mine;
+
+  /// In group chats, the other person's name shown above their bubble.
+  final String? senderName;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final bg = mine ? scheme.primary : scheme.surfaceContainerHighest;
     final fg = mine ? scheme.onPrimary : scheme.onSurface;
+    final showName = senderName != null && senderName!.isNotEmpty;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        padding: message.type == 'image'
-            ? const EdgeInsets.all(4)
-            : const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.72),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: message.type == 'image' && message.mediaUrl.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: CachedNetworkImage(imageUrl: message.mediaUrl),
-              )
-            : Text(message.text, style: TextStyle(color: fg)),
+      child: Column(
+        crossAxisAlignment:
+            mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (showName)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, top: 3, bottom: 1),
+              child: Text(senderName!,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: scheme.primary, fontWeight: FontWeight.w600)),
+            ),
+          Container(
+            margin: EdgeInsets.only(top: showName ? 0 : 3, bottom: 3),
+            padding: message.type == 'image'
+                ? const EdgeInsets.all(4)
+                : const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.72),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: message.type == 'image' && message.mediaUrl.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(imageUrl: message.mediaUrl),
+                  )
+                : Text(message.text, style: TextStyle(color: fg)),
+          ),
+        ],
       ),
     );
   }

@@ -25,6 +25,7 @@ import '../../features/journeys/journey_detail_screen.dart';
 import '../../features/journeys/journey_editor_screen.dart';
 import '../../features/messaging/chat_screen.dart';
 import '../../features/messaging/conversations_screen.dart';
+import '../../features/messaging/new_group_screen.dart';
 import '../../features/messaging/new_message_screen.dart';
 import '../../features/moderation/moderation_screen.dart';
 import '../../features/monetization/admin_verification_screen.dart';
@@ -94,6 +95,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Messaging (P3)
       GoRoute(path: '/messages/new', builder: (_, __) => const NewMessageScreen()),
+      GoRoute(
+          path: '/messages/new-group',
+          builder: (_, __) => const NewGroupScreen()),
       GoRoute(
           path: '/chat/:cid',
           builder: (_, s) => ChatScreen(cid: s.pathParameters['cid']!)),

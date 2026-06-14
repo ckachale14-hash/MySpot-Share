@@ -23,6 +23,11 @@ class ConversationsScreen extends ConsumerWidget {
         title: const Text('Messages'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.group_add_outlined),
+            tooltip: 'New group',
+            onPressed: () => context.push('/messages/new-group'),
+          ),
+          IconButton(
             icon: const Icon(Icons.edit_square),
             tooltip: 'New message',
             onPressed: () => context.push('/messages/new'),
@@ -62,10 +67,15 @@ class ConversationsScreen extends ConsumerWidget {
                     final preview = c.lastMessage?.text ?? '';
                     return ListTile(
                       onTap: () => context.push('/chat/${c.id}'),
-                      leading: UserAvatar(
-                          photoUrl: other.photoUrl, name: other.displayName),
+                      leading: c.isGroup
+                          ? CircleAvatar(
+                              backgroundColor: t.colorScheme.primaryContainer,
+                              child: Icon(Icons.groups,
+                                  color: t.colorScheme.onPrimaryContainer))
+                          : UserAvatar(
+                              photoUrl: other.photoUrl, name: other.displayName),
                       title: Text(
-                        other.displayName.isEmpty ? '@${other.handle}' : other.displayName,
+                        c.titleFor(uid),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(

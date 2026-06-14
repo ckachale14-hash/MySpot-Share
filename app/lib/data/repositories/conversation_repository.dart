@@ -52,6 +52,32 @@ class ConversationRepository {
     return id;
   }
 
+  /// Create a group conversation owned by [me] with the chosen [others].
+  Future<String> createGroup({
+    required AuthorRef me,
+    required List<AuthorRef> others,
+    required String title,
+  }) async {
+    final members = <String, dynamic>{me.uid: me.toMap()};
+    final memberIds = <String>[me.uid];
+    final unread = <String, int>{me.uid: 0};
+    for (final o in others) {
+      members[o.uid] = o.toMap();
+      memberIds.add(o.uid);
+      unread[o.uid] = 0;
+    }
+    final ref = await _db.collection('conversations').add({
+      'memberIds': memberIds,
+      'members': members,
+      'type': 'group',
+      'title': title,
+      'unread': unread,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
   Future<void> sendText(String cid, AuthorRef sender, String text) =>
       _db.collection('conversations/$cid/messages').add({
         'senderId': sender.uid,
