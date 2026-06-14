@@ -15,6 +15,7 @@ export { onPostCreate, onPostDelete } from "./feed/onPostWrite";
 export { onLikeWrite } from "./engagement/onLikeWrite";
 export { onCommentCreate, onCommentDelete } from "./engagement/onCommentWrite";
 export { onFollowWrite } from "./engagement/onFollowWrite";
+export { onPollVoteWrite } from "./engagement/onPollVoteWrite";
 
 // Messaging (P3)
 export { onMessageCreate } from "./messaging/onMessageCreate";

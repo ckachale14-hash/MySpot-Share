@@ -27,6 +27,10 @@ final savedProvider = StreamProvider.autoDispose.family<bool, PostUser>(
   (ref, a) => ref.watch(postRepositoryProvider).watchSaved(a.postId, a.uid),
 );
 
+final myVoteProvider = StreamProvider.autoDispose.family<int?, PostUser>(
+  (ref, a) => ref.watch(postRepositoryProvider).watchMyVote(a.postId, a.uid),
+);
+
 final userPostsProvider =
     StreamProvider.autoDispose.family<List<Post>, String>(
   (ref, uid) => ref.watch(postRepositoryProvider).watchUserPosts(uid),

@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/di/repositories.dart';
 import '../../core/utils/time_ago.dart';
+import '../../core/widgets/poll_view.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../../core/widgets/verified_badge.dart';
+import '../../domain/entities/post.dart';
 import '../auth/auth_providers.dart';
 import '../profile/user_providers.dart';
 import 'feed_providers.dart';
@@ -105,6 +107,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 12),
                           child: Text(post.text, style: t.textTheme.bodyLarge),
+                        ),
+                      if (post.type == PostType.poll && post.poll != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: PollView(post: post),
                         ),
                       if (post.media.isNotEmpty)
                         Padding(

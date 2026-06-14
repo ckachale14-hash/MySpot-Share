@@ -25,10 +25,29 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   bool _aiBusy = false;
   bool _aiImgBusy = false;
 
+  bool _pollMode = false;
+  final List<TextEditingController> _options = [
+    TextEditingController(),
+    TextEditingController(),
+  ];
+
   @override
   void dispose() {
     _text.dispose();
+    for (final c in _options) {
+      c.dispose();
+    }
     super.dispose();
+  }
+
+  void _addOption() {
+    if (_options.length >= 4) return;
+    setState(() => _options.add(TextEditingController()));
+  }
+
+  void _removeOption(int i) {
+    if (_options.length <= 2) return;
+    setState(() => _options.removeAt(i).dispose());
   }
 
   Future<void> _addImage() async {
@@ -107,6 +126,33 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     final author = ref.read(currentAuthorRefProvider);
     if (author == null) return;
     final text = _text.text.trim();
+
+    if (_pollMode) {
+      final options = _options
+          .map((c) => c.text.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (text.isEmpty || options.length < 2) {
+        _toast('Add a question and at least two options.');
+        return;
+      }
+      setState(() => _busy = true);
+      try {
+        await ref.read(postRepositoryProvider).createPoll(
+              author: author,
+              question: text,
+              options: options,
+              visibility: _visibility,
+            );
+        if (mounted) Navigator.of(context).pop();
+      } catch (e) {
+        _toast('$e');
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
+
     if (text.isEmpty && _image == null) return;
 
     setState(() => _busy = true);
@@ -159,14 +205,16 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
         children: [
           TextField(
             controller: _text,
-            minLines: 4,
-            maxLines: 12,
-            decoration: const InputDecoration(
-              hintText: 'Share an update, a lesson, a win… use #hashtags',
+            minLines: _pollMode ? 1 : 4,
+            maxLines: _pollMode ? 3 : 12,
+            decoration: InputDecoration(
+              hintText: _pollMode
+                  ? 'Ask a question…'
+                  : 'Share an update, a lesson, a win… use #hashtags',
               border: InputBorder.none,
             ),
           ),
-          if (_image != null)
+          if (!_pollMode && _image != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Stack(
@@ -185,36 +233,78 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
                 ],
               ),
             ),
+          if (_pollMode) ...[
+            const SizedBox(height: 4),
+            for (var i = 0; i < _options.length; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: TextField(
+                  controller: _options[i],
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    hintText: 'Option ${i + 1}',
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                    suffixIcon: _options.length > 2
+                        ? IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => _removeOption(i),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            if (_options.length < 4)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addOption,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add option'),
+                ),
+              ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (!_pollMode)
+                IconButton.filledTonal(
+                  onPressed: _busy ? null : _addImage,
+                  icon: const Icon(Icons.image_outlined),
+                ),
               IconButton.filledTonal(
-                onPressed: _busy ? null : _addImage,
-                icon: const Icon(Icons.image_outlined),
+                isSelected: _pollMode,
+                tooltip: _pollMode ? 'Remove poll' : 'Create poll',
+                onPressed: _busy
+                    ? null
+                    : () => setState(() => _pollMode = !_pollMode),
+                icon: const Icon(Icons.poll_outlined),
               ),
-              OutlinedButton.icon(
-                onPressed: _aiBusy ? null : _improveWithAi,
-                icon: _aiBusy
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('Improve with AI'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _aiImgBusy ? null : _generateImage,
-                icon: _aiImgBusy
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.auto_awesome_motion, size: 18),
-                label: const Text('AI image'),
-              ),
+              if (!_pollMode) ...[
+                OutlinedButton.icon(
+                  onPressed: _aiBusy ? null : _improveWithAi,
+                  icon: _aiBusy
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Improve with AI'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _aiImgBusy ? null : _generateImage,
+                  icon: _aiImgBusy
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome_motion, size: 18),
+                  label: const Text('AI image'),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),

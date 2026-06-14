@@ -157,6 +157,40 @@ describe("likes (P1)", () => {
   });
 });
 
+describe("poll votes (P1)", () => {
+  it("votes as self with an int option; rejects others and non-int", async () => {
+    await seed("posts/pp", { authorId: "carol", type: "poll", visibility: "public" });
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "posts/pp/votes/alice"), { option: 1 })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "posts/pp/votes/bob"), { option: 1 })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "posts/pp/votes/alice"), { option: "two" })
+    );
+  });
+
+  it("a poll cannot be created with a pre-seeded tally", async () => {
+    await assertFails(
+      setDoc(doc(db("alice"), "posts/pp2"), {
+        authorId: "alice",
+        type: "poll",
+        visibility: "public",
+        poll: { options: ["a", "b"], totalVotes: 5, tally: { "0": 5 } },
+      })
+    );
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "posts/pp3"), {
+        authorId: "alice",
+        type: "poll",
+        visibility: "public",
+        poll: { options: ["a", "b"], totalVotes: 0, tally: {} },
+      })
+    );
+  });
+});
+
 describe("follows (P1)", () => {
   it("edge id must match the follower; can't forge another's follow", async () => {
     await assertSucceeds(

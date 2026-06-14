@@ -39,6 +39,41 @@ String postTypeId(PostType t) {
   }
 }
 
+/// A poll attached to a `type: poll` post. Tallies are maintained server-side
+/// by onPollVoteWrite; clients can't write them (firestore.rules).
+class Poll {
+  const Poll({
+    required this.options,
+    this.tally = const {},
+    this.totalVotes = 0,
+    this.closesAt,
+  });
+
+  final List<String> options;
+  final Map<int, int> tally; // option index -> vote count
+  final int totalVotes;
+  final DateTime? closesAt;
+
+  int votesFor(int i) => tally[i] ?? 0;
+  bool get isClosed => closesAt != null && DateTime.now().isAfter(closesAt!);
+  double fractionFor(int i) => totalVotes == 0 ? 0 : votesFor(i) / totalVotes;
+
+  factory Poll.fromMap(Map<String, dynamic> m) {
+    final tallyRaw = (m['tally'] as Map<String, dynamic>?) ?? const {};
+    final tally = <int, int>{};
+    tallyRaw.forEach((k, v) {
+      final i = int.tryParse(k);
+      if (i != null) tally[i] = (v ?? 0) as int;
+    });
+    return Poll(
+      options: ((m['options'] ?? []) as List).map((e) => '$e').toList(),
+      tally: tally,
+      totalVotes: (m['totalVotes'] ?? 0) as int,
+      closesAt: (m['closesAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
 class Post {
   const Post({
     required this.id,
@@ -54,6 +89,7 @@ class Post {
     this.shareCount = 0,
     this.saveCount = 0,
     this.isSponsored = false,
+    this.poll,
     this.createdAt,
   });
 
@@ -70,6 +106,7 @@ class Post {
   final int shareCount;
   final int saveCount;
   final bool isSponsored;
+  final Poll? poll;
   final DateTime? createdAt;
 
   factory Post.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -91,6 +128,9 @@ class Post {
       shareCount: (m['shareCount'] ?? 0) as int,
       saveCount: (m['saveCount'] ?? 0) as int,
       isSponsored: (m['isSponsored'] ?? false) as bool,
+      poll: m['poll'] == null
+          ? null
+          : Poll.fromMap(Map<String, dynamic>.from(m['poll'] as Map)),
       createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
     );
   }

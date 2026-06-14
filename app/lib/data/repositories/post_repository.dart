@@ -60,7 +60,61 @@ class PostRepository {
     return ref.id;
   }
 
+  /// Create a poll post. Tallies start empty and are maintained server-side.
+  Future<String> createPoll({
+    required AuthorRef author,
+    required String question,
+    required List<String> options,
+    String visibility = 'public',
+    Duration? duration,
+  }) async {
+    final ref = await _posts.add({
+      'authorId': author.uid,
+      'author': author.toMap(),
+      'type': 'poll',
+      'text': question,
+      'media': const [],
+      'hashtags': const [],
+      'mentions': const [],
+      'visibility': visibility,
+      'poll': {
+        'options': options,
+        'tally': <String, int>{},
+        'totalVotes': 0,
+        if (duration != null)
+          'closesAt': Timestamp.fromDate(DateTime.now().add(duration)),
+      },
+      'likeCount': 0,
+      'commentCount': 0,
+      'shareCount': 0,
+      'saveCount': 0,
+      'viewCount': 0,
+      'score': 0,
+      'removed': false,
+      'isSponsored': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    return ref.id;
+  }
+
   Future<void> deletePost(String id) => _posts.doc(id).delete();
+
+  // ---- poll votes (one per user at posts/{id}/votes/{uid}; tally by a Function)
+  Stream<int?> watchMyVote(String postId, String uid) => _posts
+      .doc(postId)
+      .collection('votes')
+      .doc(uid)
+      .snapshots()
+      .map((d) {
+        final v = d.data()?['option'];
+        return v is int ? v : null;
+      });
+
+  Future<void> setVote(String postId, String uid, int option) =>
+      _posts.doc(postId).collection('votes').doc(uid).set({
+        'option': option,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
   // ---- likes (edge at posts/{id}/likes/{uid}; counts maintained by a Function)
   Stream<bool> watchLiked(String postId, String uid) =>

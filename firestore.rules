@@ -129,14 +129,17 @@ service cloud.firestore {
         && request.resource.data.get('viewCount', 0) == 0
         && request.resource.data.get('score', 0) == 0
         && request.resource.data.get('removed', false) == false
-        && request.resource.data.get('isSponsored', false) == false;
+        && request.resource.data.get('isSponsored', false) == false
+        // polls must start with an empty, zeroed tally
+        && request.resource.data.get('poll', {}).get('totalVotes', 0) == 0
+        && request.resource.data.get('poll', {}).get('tally', {}).keys().size() == 0;
 
-      // Author may edit body/visibility only; counters, score, moderation server-only.
+      // Author may edit body/visibility only; counters, score, tally server-only.
       allow update: if isSignedIn()
         && resource.data.authorId == request.auth.uid
         && untouched([
              'authorId','likeCount','commentCount','shareCount','saveCount',
-             'viewCount','score','isSponsored','removed','createdAt'
+             'viewCount','score','isSponsored','removed','poll','createdAt'
            ]);
 
       allow delete: if isSignedIn()
@@ -147,6 +150,14 @@ service cloud.firestore {
         allow read:   if isSignedIn();
         allow create, delete: if isUser(likeUid);
         allow update: if false;
+      }
+
+      // poll vote: one per user; tallies maintained by onPollVoteWrite
+      match /votes/{voterUid} {
+        allow read: if isSignedIn();
+        allow create, update: if isUser(voterUid)
+          && request.resource.data.option is int;
+        allow delete: if isUser(voterUid);
       }
 
       // comments

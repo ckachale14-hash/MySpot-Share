@@ -9,6 +9,7 @@ import '../../domain/entities/post.dart';
 import '../../features/auth/auth_providers.dart';
 import '../../features/feed/feed_providers.dart';
 import '../utils/time_ago.dart';
+import 'poll_view.dart';
 import 'user_avatar.dart';
 import 'verified_badge.dart';
 
@@ -116,6 +117,11 @@ class PostCard extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(post.text, style: t.textTheme.bodyMedium),
+              ),
+            if (post.type == PostType.poll && post.poll != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: PollView(post: post),
               ),
             if (post.media.isNotEmpty)
               Padding(
