@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
 import 'auth_providers.dart';
+import 'phone_sign_in_screen.dart';
 
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -96,6 +97,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     icon: const Icon(Icons.g_mobiledata, size: 28),
                     label: const Text('Continue with Google'),
                   ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _run(repo.signInWithApple),
+                    icon: const Icon(Icons.apple, size: 22),
+                    label: const Text('Continue with Apple'),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const PhoneSignInScreen(),
+                              ),
+                            ),
+                    icon: const Icon(Icons.phone_outlined, size: 22),
+                    label: const Text('Continue with phone'),
+                  ),
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed:
@@ -104,11 +123,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         ? 'Have an account? Sign in'
                         : 'New here? Create an account'),
                   ),
-                  const SizedBox(height: 8),
-                  Text('Apple & phone sign-in are wired during P0 setup (docs/06).',
-                      textAlign: TextAlign.center,
-                      style: t.textTheme.bodySmall
-                          ?.copyWith(color: t.colorScheme.outline)),
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/entities/auth_user.dart';
@@ -34,6 +35,47 @@ class FirebaseAuthRepository implements AuthRepository {
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
+    );
+    await _auth.signInWithCredential(credential);
+  }
+
+  @override
+  Future<void> signInWithApple() async {
+    final provider = AppleAuthProvider()
+      ..addScope('email')
+      ..addScope('name');
+    // Web/desktop use a popup; iOS/Android use the native/web provider flow.
+    if (kIsWeb) {
+      await _auth.signInWithPopup(provider);
+    } else {
+      await _auth.signInWithProvider(provider);
+    }
+  }
+
+  @override
+  Future<void> startPhoneSignIn({
+    required String phoneNumber,
+    required void Function(String verificationId) codeSent,
+    required void Function(String message) onError,
+    void Function()? onAutoVerified,
+  }) async {
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (credential) async {
+        await _auth.signInWithCredential(credential);
+        onAutoVerified?.call();
+      },
+      verificationFailed: (e) => onError(e.message ?? e.code),
+      codeSent: (verificationId, _) => codeSent(verificationId),
+      codeAutoRetrievalTimeout: (_) {},
+    );
+  }
+
+  @override
+  Future<void> confirmPhoneCode(String verificationId, String smsCode) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
     );
     await _auth.signInWithCredential(credential);
   }

@@ -135,8 +135,15 @@ CI runs all three on every push/PR — see `.github/workflows/ci.yml`.
 
 ## What P0 delivers
 
-Auth (email + Google; Apple/phone to wire), first-run onboarding (handle claim +
+Auth (email, Google, Apple, and phone/OTP), first-run onboarding (handle claim +
 profile), the 5-tab shell, and a profile screen reading the live `users/{uid}`
 doc — on a secured backend (rules deployed, App Check, server-provisioned
 identity). Subsequent phases (feed, journeys, messaging, live, monetization, AI,
 admin) build on this per [docs/08-roadmap.md](docs/08-roadmap.md).
+
+**Apple & phone providers:** both use Firebase Auth's built-in flows (no extra
+package). For Apple, enable the provider in the Firebase console and configure
+the Apple Service ID / Sign in with Apple capability (iOS) per the console
+wizard. For phone, enable Phone auth, add your SHA-256 + APNs key (Android/iOS),
+and register App Check / reCAPTCHA for web. Test numbers can be added in the
+console while developing.
