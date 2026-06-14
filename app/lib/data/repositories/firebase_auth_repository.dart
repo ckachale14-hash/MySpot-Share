@@ -81,6 +81,13 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> deleteAccount() async {
+    // Deleting the auth user fires the onUserDelete Function (GDPR cleanup).
+    await _auth.currentUser?.delete();
+    await GoogleSignIn().signOut();
+  }
+
+  @override
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _auth.signOut();

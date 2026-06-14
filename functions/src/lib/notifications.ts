@@ -17,6 +17,20 @@ export type NotificationType =
   | "system";
 
 /**
+ * Whether the user wants push for a given category. Reads `notifPrefs` on the
+ * user doc; a missing map or missing entry means enabled (opt-out model).
+ */
+export async function pushEnabled(uid: string, type: string): Promise<boolean> {
+  try {
+    const snap = await db.doc(`users/${uid}`).get();
+    const prefs = snap.get("notifPrefs") as Record<string, boolean> | undefined;
+    return prefs?.[type] !== false;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Send an FCM push to a user's registered devices (no in-app notification doc).
  * Best-effort: prunes tokens that fail. Use for messages and transient pings.
  */
@@ -78,6 +92,9 @@ export async function notify(params: {
     console.error("notify: failed to write notification doc", e);
     return;
   }
+
+  // The in-app notification is always kept; push respects the user's prefs.
+  if (!(await pushEnabled(toUid, type))) return;
 
   await sendPush(toUid, pushTitle(type, actor), text ?? pushBody(type, actor), {
     type,

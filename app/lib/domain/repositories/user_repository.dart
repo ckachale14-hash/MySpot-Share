@@ -25,4 +25,7 @@ abstract interface class UserRepository {
     String bio,
     String photoUrl,
   });
+
+  /// Persist per-type push preferences to `users/{uid}.notifPrefs`.
+  Future<void> updateNotifPrefs(String uid, Map<String, bool> prefs);
 }

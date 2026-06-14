@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/widgets/async_value_widget.dart';
 import '../../core/widgets/post_card.dart';
 import '../../core/widgets/verified_badge.dart';
-import '../auth/auth_providers.dart';
 import '../feed/feed_providers.dart';
 import 'user_providers.dart';
 
@@ -26,9 +25,9 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () => context.push('/profile/edit'),
           ),
           IconButton(
-            tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),

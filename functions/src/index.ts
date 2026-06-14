@@ -5,6 +5,7 @@
 
 // Auth & identity
 export { onUserCreate } from "./auth/onUserCreate";
+export { onUserDelete } from "./auth/onUserDelete";
 export { claimHandle } from "./auth/claimHandle";
 export { setUserRole } from "./auth/setUserRole";
 export { registerDevice } from "./auth/registerDevice";

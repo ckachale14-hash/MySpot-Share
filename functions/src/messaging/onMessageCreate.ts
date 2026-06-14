@@ -1,7 +1,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../lib/admin";
-import { sendPush } from "../lib/notifications";
+import { pushEnabled, sendPush } from "../lib/notifications";
 
 /**
  * On a new message: update the conversation's lastMessage + updatedAt, increment
@@ -45,12 +45,13 @@ export const onMessageCreate = onDocumentCreated(
     await Promise.all(
       ids
         .filter((uid) => uid !== senderId)
-        .map((uid) =>
-          sendPush(uid, senderName, preview, {
+        .map(async (uid) => {
+          if (!(await pushEnabled(uid, "message"))) return;
+          await sendPush(uid, senderName, preview, {
             type: "message",
             conversationId,
-          })
-        )
+          });
+        })
     );
   }
 );

@@ -24,5 +24,9 @@ abstract interface class AuthRepository {
   /// Complete phone sign-in with the SMS [smsCode] for [verificationId].
   Future<void> confirmPhoneCode(String verificationId, String smsCode);
 
+  /// Permanently delete the signed-in account. May throw
+  /// `requires-recent-login` if the session is too old to delete.
+  Future<void> deleteAccount();
+
   Future<void> signOut();
 }

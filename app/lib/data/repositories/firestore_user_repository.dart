@@ -59,4 +59,8 @@ class FirestoreUserRepository implements UserRepository {
       if (photoUrl.isNotEmpty) 'photoUrl': photoUrl,
     });
   }
+
+  @override
+  Future<void> updateNotifPrefs(String uid, Map<String, bool> prefs) =>
+      _db.collection('users').doc(uid).update({'notifPrefs': prefs});
 }

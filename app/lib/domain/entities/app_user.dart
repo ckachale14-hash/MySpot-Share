@@ -22,6 +22,7 @@ class AppUser {
     this.followerCount = 0,
     this.followingCount = 0,
     this.postCount = 0,
+    this.notifPrefs = const {},
   });
 
   final String uid;
@@ -40,6 +41,13 @@ class AppUser {
   final int followingCount;
   final int postCount;
 
+  /// Per-type push preferences (like/comment/follow/mention/message).
+  /// A missing entry means enabled.
+  final Map<String, bool> notifPrefs;
+
+  /// Whether push for [type] is on (defaults to true when unset).
+  bool notifEnabled(String type) => notifPrefs[type] != false;
+
   factory AppUser.fromMap(String uid, Map<String, dynamic> m) => AppUser(
         uid: uid,
         handle: (m['handle'] ?? '') as String,
@@ -56,6 +64,8 @@ class AppUser {
         followerCount: (m['followerCount'] ?? 0) as int,
         followingCount: (m['followingCount'] ?? 0) as int,
         postCount: (m['postCount'] ?? 0) as int,
+        notifPrefs: ((m['notifPrefs'] as Map<String, dynamic>?) ?? const {})
+            .map((k, v) => MapEntry(k, v == true)),
       );
 
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) =>
