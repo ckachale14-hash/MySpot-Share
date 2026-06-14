@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
+import '../../domain/entities/app_report.dart';
 import '../../domain/entities/verification_request.dart';
 
 /// Admin/moderator operations. Authorization is enforced server-side in the
@@ -33,4 +34,19 @@ class AdminRepository {
         'approve': approve,
         if (note != null) 'note': note,
       });
+
+  Stream<List<AppReport>> watchReports() => _db
+      .collection('reports')
+      .where('status', isEqualTo: 'open')
+      .orderBy('createdAt')
+      .limit(50)
+      .snapshots()
+      .map((q) => q.docs.map(AppReport.fromDoc).toList());
+
+  Future<void> resolveReport(String reportId, {required bool remove}) =>
+      _functions.httpsCallable('resolveReport').call({
+        'reportId': reportId,
+        'action': remove ? 'remove' : 'dismiss',
+      });
 }
+

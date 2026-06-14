@@ -105,6 +105,16 @@ class PostRepository {
 
   Future<void> deleteComment(String postId, String commentId) =>
       _posts.doc(postId).collection('comments').doc(commentId).delete();
+
+  Future<void> reportPost(String postId, String reporterId, String reason) =>
+      _db.collection('reports').add({
+        'reporterId': reporterId,
+        'targetType': 'post',
+        'targetId': postId,
+        'reason': reason,
+        'status': 'open',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 }
 
 /// Extract `#hashtags` and `@mentions` (handles) from composer text.

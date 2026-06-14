@@ -72,6 +72,44 @@ class PostCard extends ConsumerWidget {
                     visualDensity: VisualDensity.compact,
                     labelStyle: t.textTheme.labelSmall,
                   ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (v) async {
+                    if (v == 'report' && uid != null) {
+                      final reason = await showModalBottomSheet<String>(
+                        context: context,
+                        builder: (_) => SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final r in const [
+                                'Spam',
+                                'Harassment',
+                                'Scam or fraud',
+                                'Inappropriate',
+                                'Other'
+                              ])
+                                ListTile(
+                                    title: Text(r),
+                                    onTap: () => Navigator.pop(context, r)),
+                            ],
+                          ),
+                        ),
+                      );
+                      if (reason != null) {
+                        await repo.reportPost(post.id, uid, reason);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Reported. Thank you.')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'report', child: Text('Report')),
+                  ],
+                ),
               ],
             ),
             if (post.text.isNotEmpty)

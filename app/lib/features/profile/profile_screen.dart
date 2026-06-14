@@ -120,6 +120,13 @@ class ProfileScreen extends ConsumerWidget {
                       icon: const Icon(Icons.campaign_outlined),
                       label: const Text('Admin · Ad review')),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton.icon(
+                      onPressed: () => context.push('/admin/reports'),
+                      icon: const Icon(Icons.flag_outlined),
+                      label: const Text('Admin · Reports')),
+                ),
               ],
               Padding(
                 padding: const EdgeInsets.only(top: 8),

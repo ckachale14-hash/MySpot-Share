@@ -25,6 +25,7 @@ import '../../features/journeys/journey_editor_screen.dart';
 import '../../features/messaging/chat_screen.dart';
 import '../../features/messaging/conversations_screen.dart';
 import '../../features/messaging/new_message_screen.dart';
+import '../../features/moderation/moderation_screen.dart';
 import '../../features/monetization/admin_verification_screen.dart';
 import '../../features/monetization/premium_screen.dart';
 import '../../features/monetization/verification_screen.dart';
@@ -104,6 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/ads', builder: (_, __) => const AdsManagerScreen()),
       GoRoute(path: '/ads/new', builder: (_, __) => const CreateCampaignScreen()),
       GoRoute(path: '/admin/ads', builder: (_, __) => const AdminAdsScreen()),
+      GoRoute(path: '/admin/reports', builder: (_, __) => const ModerationScreen()),
 
       // AI video (P3)
       GoRoute(path: '/ai/video', builder: (_, __) => const AiVideoScreen()),

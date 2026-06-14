@@ -303,3 +303,44 @@ describe("video jobs (AI)", () => {
     );
   });
 });
+
+describe("reports (moderation)", () => {
+  it("a user files an open report as themselves; can't preset resolved or forge reporter", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "reports/r1"), {
+        reporterId: "alice",
+        targetType: "post",
+        targetId: "p1",
+        reason: "Spam",
+        status: "open",
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "reports/r2"), {
+        reporterId: "alice",
+        targetType: "post",
+        targetId: "p1",
+        status: "resolved",
+      })
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "reports/r3"), {
+        reporterId: "bob",
+        targetType: "post",
+        targetId: "p1",
+        status: "open",
+      })
+    );
+  });
+
+  it("non-moderators cannot read the report queue", async () => {
+    await seed("reports/r4", {
+      reporterId: "alice",
+      targetType: "post",
+      targetId: "p1",
+      status: "open",
+    });
+    await assertFails(getDoc(doc(db("bob"), "reports/r4")));
+    await assertSucceeds(getDoc(doc(db("mod", { role: "moderator" }), "reports/r4")));
+  });
+});

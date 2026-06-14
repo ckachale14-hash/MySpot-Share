@@ -21,6 +21,9 @@ export { onMessageCreate } from "./messaging/onMessageCreate";
 // Business directory
 export { onReviewWrite } from "./business/onReviewWrite";
 
+// Moderation
+export { resolveReport } from "./moderation/resolveReport";
+
 // Monetization (P2)
 export { startVerification } from "./verification/startVerification";
 export { approveVerification } from "./verification/approveVerification";
