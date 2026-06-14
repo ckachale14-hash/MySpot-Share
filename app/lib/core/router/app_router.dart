@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../observability/observability.dart';
 import '../../features/ads/admin_ads_screen.dart';
 import '../../features/ads/ads_manager_screen.dart';
 import '../../features/ads/create_campaign_screen.dart';
@@ -48,6 +49,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/home',
     refreshListenable: notifier,
     redirect: notifier.redirect,
+    observers: [analyticsObserver],
     routes: [
       GoRoute(path: '/sign-in', builder: (_, __) => const SignInScreen()),
       GoRoute(path: '/onboarding', builder: (_, __) => const ProfileSetupScreen()),

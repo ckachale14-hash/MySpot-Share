@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/observability/observability.dart';
 import 'features/monetization/purchases_service.dart';
 import 'firebase_options.dart';
 
@@ -24,6 +25,10 @@ Future<void> main() async {
         kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
     appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
   );
+
+  // Crash reporting, performance, and analytics (Crashlytics/Perf are
+  // mobile-only and no-op on web).
+  await initObservability();
 
   // Configure in-app purchases (no-op on web / until RevenueCat keys are set).
   try {

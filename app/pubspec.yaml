@@ -24,6 +24,12 @@ dependencies:
   firebase_app_check: ^0.3.2
   firebase_database: ^11.1.4
 
+  # Observability — analytics works on web; Crashlytics/Performance are
+  # mobile-only and are guarded by kIsWeb in core/observability.
+  firebase_analytics: ^11.3.0
+  firebase_crashlytics: ^4.1.0
+  firebase_performance: ^0.10.0
+
   # Auth providers
   google_sign_in: ^6.2.2
   # sign_in_with_apple: ^6.1.4   # add when wiring Apple sign-in (see docs/06)

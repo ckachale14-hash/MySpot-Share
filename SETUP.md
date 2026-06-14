@@ -105,6 +105,38 @@ The client triggers the purchase; the webhook is the source of truth that grants
 `premium` (mirrored to `subscriptions/{uid}` + custom claim). On web the keys stay
 `REPLACE_*` and IAP is simply disabled.
 
+## 5d. Observability (Analytics, Crashlytics, Performance)
+
+`core/observability` wires Firebase Analytics (screen tracking via a go_router
+observer), Crashlytics (uncaught Flutter + async errors), and Performance
+Monitoring. Crashlytics and Performance are **mobile-only** — on web they're a
+no-op (guarded by `kIsWeb`), and Analytics works on all platforms.
+
+Native build config is required for the **Android** Crashlytics Gradle plugin
+(iOS works via the pod that FlutterFire adds). With the Flutter Gradle plugin
+DSL, add to `android/settings.gradle`:
+
+```groovy
+plugins {
+  // ...existing google-services line from flutterfire configure...
+  id "com.google.firebase.crashlytics" version "3.0.2" apply false
+}
+```
+
+and to `android/app/build.gradle`:
+
+```groovy
+plugins {
+  // ...
+  id "com.google.gms.google-services"
+  id "com.google.firebase.crashlytics"
+}
+```
+
+Collection is disabled in debug builds; verify a forced test crash reaches the
+Crashlytics dashboard before release. Analytics events and crashes need no
+client keys beyond the standard `firebase_options.dart`.
+
 ## 6. Run
 
 ```bash
