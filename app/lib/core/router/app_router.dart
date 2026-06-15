@@ -18,6 +18,7 @@ import '../../features/invite/invite_screen.dart';
 import '../../features/live/host_live_screen.dart';
 import '../../features/live/live_discovery_screen.dart';
 import '../../features/live/live_viewer_screen.dart';
+import '../../features/feed/article_editor_screen.dart';
 import '../../features/feed/composer_screen.dart';
 import '../../features/feed/home_feed_screen.dart';
 import '../../features/feed/post_detail_screen.dart';
@@ -57,6 +58,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Full-screen routes pushed above the tab shell.
       GoRoute(path: '/compose', builder: (_, __) => const ComposerScreen()),
+      GoRoute(
+          path: '/article/new',
+          builder: (_, __) => const ArticleEditorScreen()),
       GoRoute(
           path: '/post/:id',
           builder: (_, s) => PostDetailScreen(postId: s.pathParameters['id']!)),

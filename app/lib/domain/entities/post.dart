@@ -81,6 +81,7 @@ class Post {
     required this.author,
     this.type = PostType.text,
     this.text = '',
+    this.title = '',
     this.media = const [],
     this.hashtags = const [],
     this.visibility = 'public',
@@ -98,6 +99,9 @@ class Post {
   final AuthorRef author;
   final PostType type;
   final String text;
+
+  /// Headline for `article` posts (empty otherwise).
+  final String title;
   final List<MediaItem> media;
   final List<String> hashtags;
   final String visibility;
@@ -117,6 +121,7 @@ class Post {
       author: AuthorRef.fromMap(m['author'] as Map<String, dynamic>?),
       type: _postTypeFromId(m['type'] as String?),
       text: (m['text'] ?? '') as String,
+      title: (m['title'] ?? '') as String,
       media: ((m['media'] ?? []) as List)
           .whereType<Map<String, dynamic>>()
           .map(MediaItem.fromMap)

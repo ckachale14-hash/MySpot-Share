@@ -19,6 +19,12 @@ class CreateHubScreen extends StatelessWidget {
             onTap: () => context.push('/compose'),
           ),
           _Tile(
+            icon: Icons.article_outlined,
+            title: 'Write an article',
+            subtitle: 'Long-form insights, guides, or lessons',
+            onTap: () => context.push('/article/new'),
+          ),
+          _Tile(
             icon: Icons.auto_stories_outlined,
             title: 'Founder Journey',
             subtitle: 'Tell how you started — capital, mistakes, lessons',

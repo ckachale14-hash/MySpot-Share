@@ -109,6 +109,14 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           ),
                         ],
                       ),
+                      if (post.type == PostType.article &&
+                          post.title.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text(post.title,
+                              style: t.textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
+                        ),
                       if (post.text.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 12),

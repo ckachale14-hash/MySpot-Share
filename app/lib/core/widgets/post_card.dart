@@ -125,32 +125,36 @@ class PostCard extends ConsumerWidget {
                 ),
               ],
             ),
-            if (post.text.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(post.text, style: t.textTheme.bodyMedium),
-              ),
-            if (post.type == PostType.poll && post.poll != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: PollView(post: post),
-              ),
-            if (post.media.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CachedNetworkImage(
-                    imageUrl: post.media.first.url,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    placeholder: (_, __) => const AspectRatio(
-                        aspectRatio: 1.6,
-                        child: ColoredBox(color: Color(0x11000000))),
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            if (post.type == PostType.article)
+              _ArticlePreview(post: post)
+            else ...[
+              if (post.text.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(post.text, style: t.textTheme.bodyMedium),
+                ),
+              if (post.type == PostType.poll && post.poll != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: PollView(post: post),
+                ),
+              if (post.media.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CachedNetworkImage(
+                      imageUrl: post.media.first.url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (_, __) => const AspectRatio(
+                          aspectRatio: 1.6,
+                          child: ColoredBox(color: Color(0x11000000))),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                    ),
                   ),
                 ),
-              ),
+            ],
             Row(
               children: [
                 _Action(
@@ -185,6 +189,70 @@ class PostCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Feed preview for an article: cover, headline, snippet, and a read-time label.
+class _ArticlePreview extends StatelessWidget {
+  const _ArticlePreview({required this.post});
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final words = post.text.trim().isEmpty
+        ? 0
+        : post.text.trim().split(RegExp(r'\s+')).length;
+    final mins = (words / 200).ceil().clamp(1, 99);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (post.media.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: post.media.first.url,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: (_, __) => const AspectRatio(
+                    aspectRatio: 1.8,
+                    child: ColoredBox(color: Color(0x11000000))),
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Text(post.title.isEmpty ? 'Untitled article' : post.title,
+              style:
+                  t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        ),
+        if (post.text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(post.text,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: t.textTheme.bodyMedium
+                    ?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Icon(Icons.article_outlined,
+                  size: 15, color: t.colorScheme.primary),
+              const SizedBox(width: 4),
+              Text('Article · $mins min read',
+                  style: t.textTheme.labelSmall
+                      ?.copyWith(color: t.colorScheme.primary)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
