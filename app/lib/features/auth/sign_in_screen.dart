@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/widgets/brand_wordmark.dart';
 import 'auth_providers.dart';
 import 'phone_sign_in_screen.dart';
 
@@ -54,11 +55,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(AppConfig.appName,
-                      textAlign: TextAlign.center,
-                      style: t.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: t.colorScheme.primary)),
+                  BrandWordmark(style: t.textTheme.displaySmall),
                   const SizedBox(height: 8),
                   Text(AppConfig.tagline,
                       textAlign: TextAlign.center,
