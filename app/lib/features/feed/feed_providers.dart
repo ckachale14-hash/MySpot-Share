@@ -6,10 +6,6 @@ import '../../domain/entities/post.dart';
 
 typedef PostUser = ({String postId, String uid});
 
-final forYouFeedProvider = StreamProvider.autoDispose<List<Post>>(
-  (ref) => ref.watch(postRepositoryProvider).watchForYou(),
-);
-
 final postProvider = StreamProvider.autoDispose.family<Post?, String>(
   (ref, id) => ref.watch(postRepositoryProvider).watchPost(id),
 );

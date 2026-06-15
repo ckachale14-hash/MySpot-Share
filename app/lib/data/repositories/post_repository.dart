@@ -19,6 +19,24 @@ class PostRepository {
       .snapshots()
       .map((q) => q.docs.map(Post.fromDoc).toList());
 
+  /// One page of the For-You feed. Returns the posts plus a cursor (the last
+  /// document) to pass back as [startAfter] for the next page.
+  Future<({List<Post> posts, DocumentSnapshot? cursor})> fetchForYou({
+    DocumentSnapshot? startAfter,
+    int limit = 12,
+  }) async {
+    Query<Map<String, dynamic>> q = _posts
+        .where('visibility', isEqualTo: 'public')
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+    if (startAfter != null) q = q.startAfterDocument(startAfter);
+    final snap = await q.get();
+    return (
+      posts: snap.docs.map(Post.fromDoc).toList(),
+      cursor: snap.docs.isEmpty ? null : snap.docs.last,
+    );
+  }
+
   Stream<List<Post>> watchUserPosts(String uid, {int limit = 30}) => _posts
       .where('authorId', isEqualTo: uid)
       .orderBy('createdAt', descending: true)
