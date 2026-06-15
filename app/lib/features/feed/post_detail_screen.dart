@@ -11,6 +11,7 @@ import '../../core/widgets/verified_badge.dart';
 import '../../domain/entities/post.dart';
 import '../auth/auth_providers.dart';
 import '../profile/user_providers.dart';
+import '../social/social_providers.dart';
 import 'feed_providers.dart';
 
 class PostDetailScreen extends ConsumerStatefulWidget {
@@ -52,7 +53,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final post = ref.watch(postProvider(widget.postId)).value;
-    final comments = ref.watch(commentsProvider(widget.postId)).value ?? const [];
+    final blocked = ref.watch(blockedIdsProvider).value ?? const <String>{};
+    final allComments =
+        ref.watch(commentsProvider(widget.postId)).value ?? const [];
+    final comments = blocked.isEmpty
+        ? allComments
+        : allComments.where((c) => !blocked.contains(c.authorId)).toList();
     final uid = ref.watch(authStateChangesProvider).value?.uid;
     final repo = ref.read(postRepositoryProvider);
     final liked = uid == null

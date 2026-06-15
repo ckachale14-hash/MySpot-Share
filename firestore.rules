@@ -82,6 +82,11 @@ service cloud.firestore {
         allow read, write: if isUser(uid);
       }
 
+      // Blocked accounts (private). onBlockCreate severs follow edges.
+      match /blocks/{blockedUid} {
+        allow read, write: if isUser(uid);
+      }
+
       // Home-feed fan-out view & FYP signals — server-maintained.
       match /home/{postId}      { allow read: if isUser(uid); allow write: if false; }
       match /interests/{signal} { allow read: if isUser(uid); allow write: if false; }

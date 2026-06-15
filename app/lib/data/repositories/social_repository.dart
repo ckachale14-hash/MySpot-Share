@@ -31,4 +31,30 @@ class SocialRepository {
           })
         : ref.delete();
   }
+
+  // ---- blocking (private list at users/{uid}/blocks/{blockedUid}) ----
+  Stream<Set<String>> watchBlocked(String uid) => _db
+      .collection('users')
+      .doc(uid)
+      .collection('blocks')
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map((q) => q.docs.map((d) => d.id).toSet());
+
+  Future<void> blockUser(String me, String target) => _db
+      .doc('users/$me/blocks/$target')
+      .set({'createdAt': FieldValue.serverTimestamp()});
+
+  Future<void> unblockUser(String me, String target) =>
+      _db.doc('users/$me/blocks/$target').delete();
+
+  Future<void> reportUser(String reporterId, String targetUid, String reason) =>
+      _db.collection('reports').add({
+        'reporterId': reporterId,
+        'targetType': 'user',
+        'targetId': targetUid,
+        'reason': reason,
+        'status': 'open',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 }

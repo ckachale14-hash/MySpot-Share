@@ -105,10 +105,22 @@ class PostCard extends ConsumerWidget {
                           );
                         }
                       }
+                    } else if (v == 'block' && uid != null) {
+                      await ref
+                          .read(socialRepositoryProvider)
+                          .blockUser(uid, post.authorId);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Author blocked.')),
+                        );
+                      }
                     }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'report', child: Text('Report')),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'report', child: Text('Report')),
+                    if (uid != null && uid != post.authorId)
+                      const PopupMenuItem(
+                          value: 'block', child: Text('Block author')),
                   ],
                 ),
               ],

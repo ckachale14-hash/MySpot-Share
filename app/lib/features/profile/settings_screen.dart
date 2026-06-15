@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../auth/auth_providers.dart';
 import 'user_providers.dart';
@@ -116,6 +117,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text('Account',
                 style: t.textTheme.titleSmall
                     ?.copyWith(color: t.colorScheme.primary)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.block),
+            title: const Text('Blocked accounts'),
+            onTap: () => context.push('/settings/blocked'),
           ),
           ListTile(
             leading: const Icon(Icons.logout),

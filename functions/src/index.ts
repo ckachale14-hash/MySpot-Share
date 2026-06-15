@@ -16,6 +16,7 @@ export { onLikeWrite } from "./engagement/onLikeWrite";
 export { onCommentCreate, onCommentDelete } from "./engagement/onCommentWrite";
 export { onFollowWrite } from "./engagement/onFollowWrite";
 export { onPollVoteWrite } from "./engagement/onPollVoteWrite";
+export { onBlockCreate } from "./engagement/onBlockCreate";
 
 // Messaging (P3)
 export { onMessageCreate } from "./messaging/onMessageCreate";

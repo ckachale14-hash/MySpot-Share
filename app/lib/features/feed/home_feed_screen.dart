@@ -9,6 +9,7 @@ import '../../features/notifications/push_service.dart';
 import '../auth/auth_providers.dart';
 import '../monetization/purchases_providers.dart';
 import '../notifications/notification_providers.dart';
+import '../social/social_providers.dart';
 import '../stories/stories_bar.dart';
 import 'feed_controller.dart';
 
@@ -54,6 +55,10 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
   Widget build(BuildContext context) {
     final feed = ref.watch(feedControllerProvider);
     final uid = ref.watch(authStateChangesProvider).value?.uid;
+    final blocked = ref.watch(blockedIdsProvider).value ?? const <String>{};
+    final posts = blocked.isEmpty
+        ? feed.posts
+        : feed.posts.where((p) => !blocked.contains(p.authorId)).toList();
     final unread =
         uid == null ? 0 : ref.watch(unreadCountProvider(uid)).value ?? 0;
 
@@ -88,7 +93,7 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (feed.error != null && feed.posts.isEmpty)
+            else if (feed.error != null && posts.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(
@@ -99,15 +104,15 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
                   ),
                 ),
               )
-            else if (feed.posts.isEmpty)
+            else if (posts.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
                 child: _EmptyFeed(),
               )
             else ...[
               SliverList.builder(
-                itemCount: feed.posts.length,
-                itemBuilder: (_, i) => PostCard(post: feed.posts[i]),
+                itemCount: posts.length,
+                itemBuilder: (_, i) => PostCard(post: posts[i]),
               ),
               SliverToBoxAdapter(
                 child: _FeedFooter(

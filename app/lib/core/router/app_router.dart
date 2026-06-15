@@ -39,6 +39,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
 import '../../features/profile/user_providers.dart';
 import '../../features/shell/root_shell.dart';
+import '../../features/social/blocked_accounts_screen.dart';
 import '../../features/social/user_profile_screen.dart';
 import '../../features/stories/story_composer_screen.dart';
 import '../../features/stories/story_viewer_screen.dart';
@@ -88,6 +89,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/invite', builder: (_, __) => const InviteScreen()),
       GoRoute(path: '/profile/edit', builder: (_, __) => const EditProfileScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(
+          path: '/settings/blocked',
+          builder: (_, __) => const BlockedAccountsScreen()),
       GoRoute(path: '/saved', builder: (_, __) => const SavedPostsScreen()),
 
       // Monetization (P2)

@@ -191,6 +191,17 @@ describe("poll votes (P1)", () => {
   });
 });
 
+describe("blocks", () => {
+  it("a user manages their own block list, not someone else's", async () => {
+    await assertSucceeds(
+      setDoc(doc(db("alice"), "users/alice/blocks/bob"), {})
+    );
+    await assertFails(
+      setDoc(doc(db("alice"), "users/bob/blocks/carol"), {})
+    );
+  });
+});
+
 describe("follows (P1)", () => {
   it("edge id must match the follower; can't forge another's follow", async () => {
     await assertSucceeds(
