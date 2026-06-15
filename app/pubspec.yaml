@@ -56,6 +56,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+# App launcher icons + web favicon, generated from the brand symbol.
+# Regenerate with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon.png"
+  android: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generated: true
+    image_path: "assets/branding/app_icon_maskable.png"
+    background_color: "#FFFFFF"
+    theme_color: "#0052B4"
 
 flutter:
   uses-material-design: true
