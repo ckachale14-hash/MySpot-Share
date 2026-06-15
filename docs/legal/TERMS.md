@@ -44,7 +44,8 @@ You agree **not** to:
 - misuse AI features to generate prohibited, infringing, or misleading content.
 
 We may remove content and suspend or terminate accounts that violate these Terms or
-our community standards. Users can **report** content and **block** accounts in‑app.
+our [Community Guidelines](./COMMUNITY_GUIDELINES.md). Users can **report** content
+and **block** accounts in‑app.
 
 ## 5. Business information, no professional advice
 
@@ -70,7 +71,8 @@ Verification fees are described at purchase.
   partners (e.g. Paystack, Flutterwave, mobile money).
 - Subscriptions renew until cancelled; manage or cancel via your app store or
   account settings. **Refunds** follow the applicable app store policy and local
-  consumer law. Advertising is also subject to our Ad Policy.
+  consumer law. Advertising is also subject to our
+  [Ad Policy](./AD_POLICY.md).
 
 ## 8. AI features
 
