@@ -1,0 +1,14 @@
+# Android release signing — copy to `android/key.properties` (gitignored) and fill in.
+# Without this file, release builds fall back to debug signing (build.gradle.kts),
+# so CI and fresh clones still build.
+#
+# 1) Generate an upload keystore once (keep it safe — losing it blocks Play updates):
+#      keytool -genkey -v -keystore upload-keystore.jks -storetype JKS \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#    Place the .jks in android/app/ (gitignored) or anywhere and use an absolute path.
+#
+# 2) Fill these in (storeFile is resolved relative to android/app/, or use an absolute path):
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=upload-keystore.jks

@@ -113,8 +113,18 @@ Netlify also work — point them at `app/build/web`.
 - [ ] Host **Privacy Policy** & **Terms** (sources in `docs/legal/`); fill the
       `{{PLACEHOLDERS}}`; set `AppConfig.privacyUrl/termsUrl` and the store
       listings to those URLs. Have the legal docs reviewed by an attorney.
-- [ ] Finalize **bundle IDs** (currently `com.myspot`) and **signing**
-      (Android keystore, iOS certs/profiles).
+- [ ] Finalize **bundle IDs** (currently `com.myspot.myspot`) and **signing**.
+  - **Android:** generate an upload keystore and create `android/key.properties`
+    (template: `app/android/key.properties.example`). The build is already wired
+    to use it and falls back to debug signing when it's absent:
+    ```bash
+    keytool -genkey -v -keystore upload-keystore.jks -storetype JKS \
+      -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+    cp app/android/key.properties.example app/android/key.properties   # then fill in
+    ```
+    Keep the `.jks` safe — losing it blocks Play updates. Both are gitignored.
+  - **iOS:** signing is configured in Xcode (Runner → Signing & Capabilities):
+    select your team and a bundle ID; certificates/profiles are managed by Apple.
 - [ ] Store listings, screenshots, **Play Data Safety** / **Apple privacy**
       labels (mirror the Privacy Policy).
 - [ ] `flutter build appbundle` / `flutter build ipa` → submit for review.
