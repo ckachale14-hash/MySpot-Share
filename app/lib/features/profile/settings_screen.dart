@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/app_config.dart';
+import '../../core/utils/open_url.dart';
 import '../auth/auth_providers.dart';
 import 'user_providers.dart';
 
@@ -138,6 +140,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: Text('Delete account',
                 style: TextStyle(color: t.colorScheme.error)),
             onTap: _deleting ? null : _confirmDelete,
+          ),
+          const Divider(height: 32),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Text('Legal',
+                style: t.textTheme.titleSmall
+                    ?.copyWith(color: t.colorScheme.primary)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => openUrl(AppConfig.privacyUrl),
+          ),
+          ListTile(
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of Service'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => openUrl(AppConfig.termsUrl),
           ),
           const SizedBox(height: 24),
         ],

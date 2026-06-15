@@ -6,6 +6,11 @@ class AppConfig {
   static const String appName = 'MySpot';
   static const String tagline = 'Where entrepreneurs share the journey.';
 
+  /// Hosted legal documents (sources in docs/legal). Stores require both to be
+  /// publicly reachable — replace with your hosted URLs before submission.
+  static const String privacyUrl = 'https://myspotshare.com/privacy';
+  static const String termsUrl = 'https://myspotshare.com/terms';
+
   /// RevenueCat public SDK keys (safe to ship). Set from the RevenueCat dashboard;
   /// leave as REPLACE_* to disable in-app purchases until configured.
   static const String revenueCatIosKey = 'REPLACE_WITH_REVENUECAT_IOS_KEY';
