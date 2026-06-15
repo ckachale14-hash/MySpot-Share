@@ -4,6 +4,49 @@
 > activity (reads/writes, media, AI, live minutes). The value here is the
 > **cost model** and the **mitigations** — so you can forecast and control spend.
 
+## 0. Getting started (pre-launch & your first ~1,000 users)
+
+You can build, test, and soft-launch for **~$0–$50/month** in cloud spend — every
+Firebase service has a free tier, and the third-party services bill only on use.
+The real upfront money is the app-store developer accounts.
+
+**Upfront, one-time**
+
+| Item | Cost | For |
+|------|------|-----|
+| Apple Developer Program | **$99 / year** | iOS / App Store |
+| Google Play Developer | **$25 once** | Android / Play |
+| Domain (site, policy hosting, email) | ~$10–15 / yr | Privacy/Terms URLs, branded email |
+| Firebase / Google Cloud | **$0** | — |
+| **≈ $135 to ship to both stores** | | |
+
+**Monthly while small (dev → ~1,000 users).** Blaze (pay-as-you-go) is required for
+Functions, but it *includes* the free-tier allotments, so low usage ≈ $0:
+
+| Service | Free tier | Early cost |
+|---------|-----------|-----------|
+| Firestore | 50K reads/day · 20K writes/day · 1 GB | ~$0 |
+| Cloud Functions | 2M invocations · 400K GB-sec | ~$0 |
+| Storage | 5 GB · 1 GB/day download | ~$0 |
+| Auth (email/Google/Apple) | unlimited | $0 |
+| FCM · Realtime DB · App Check · Remote Config · Crashlytics · Analytics | free/negligible | $0 |
+| OpenAI | pay-as-you-go, no minimum | **$5–50** (testing; set a hard cap) |
+| Agora (live) | 10,000 min/mo | ~$0 |
+| Paystack / Flutterwave | no monthly fee | %/transaction only |
+| RevenueCat | free under $2,500/mo revenue | $0 |
+| Algolia / Mux | off until enabled | $0 |
+
+**Realistic all-in while small: $0–$50/month**, dominated by any OpenAI usage.
+
+**Two early surprises to control**
+1. **Phone-OTP SMS is not free** (~1–6¢ each, higher in some African markets) —
+   prefer email/Google/Apple sign-in and rate-limit OTP.
+2. **AI** — set a hard monthly spend cap in the OpenAI dashboard; keep it
+   premium-gated (the code already does).
+
+Turn on the §5 guardrails (billing budget + alerts, OpenAI cap, App Check) on day
+one. Estimates only — confirm current vendor rates at setup.
+
 ## 1. The cost drivers (what actually moves the bill)
 
 | Driver | Billed on | Risk |
