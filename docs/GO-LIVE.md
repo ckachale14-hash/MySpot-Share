@@ -83,6 +83,32 @@ this is the do-this-in-order page. Estimated first run: **half a day**.
 - [ ] Prefer email/Google/Apple sign-in; **rate-limit phone OTP** (SMS costs).
 - [ ] Watch the **reads / egress / functions** dashboards weekly.
 
+## Phase 7b — Frontend: run, build, deploy
+
+The Flutter client ships to three targets from one codebase.
+
+**Run (dev)**
+```bash
+cd app
+flutter run -d chrome        # web in the browser
+flutter run                  # attached Android/iOS device or emulator
+```
+
+**Build**
+```bash
+flutter build web --release          # → app/build/web   (PWA, branded icons/manifest)
+flutter build appbundle --release    # → Android .aab for Play
+flutter build ipa --release          # → iOS archive for App Store (needs a Mac + Xcode)
+```
+
+**Deploy the web** (fastest way to share a test build — Firebase Hosting, same
+project, free tier):
+```bash
+scripts/deploy-web.sh dev            # build + deploy → https://<project>.web.app
+```
+Hosting is configured in `firebase.json` (SPA rewrite to `index.html`). Vercel /
+Netlify also work — point them at `app/build/web`.
+
 ## Phase 8 — Store prep (when ready)
 - [ ] Host **Privacy Policy** & **Terms** (sources in `docs/legal/`); fill the
       `{{PLACEHOLDERS}}`; set `AppConfig.privacyUrl/termsUrl` and the store
@@ -99,7 +125,8 @@ this is the do-this-in-order page. Estimated first run: **half a day**.
 ```bash
 scripts/preflight.sh          # verify everything is green locally
 scripts/deploy.sh dev         # deploy backend to myspot-dev
-cd app && flutter run         # run the app
+scripts/deploy-web.sh dev     # build + deploy the web app to Firebase Hosting
+cd app && flutter run         # run the app on a device/emulator
 firebase emulators:start      # fully local stack (optional)
 ```
 See also: [`SETUP.md`](../SETUP.md) (detail), [`docs/17`](17-firebase-cost-estimates.md)
