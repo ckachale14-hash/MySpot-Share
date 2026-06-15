@@ -1,0 +1,13 @@
+{
+  "name": "myspot-seed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Idempotent demo/seed data for MySpot Share (emulator or a dev project).",
+  "type": "commonjs",
+  "scripts": {
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
