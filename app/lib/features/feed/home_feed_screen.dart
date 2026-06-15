@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/di/repositories.dart';
+import '../../core/router/app_router.dart';
 import '../../core/widgets/post_card.dart';
 import '../../features/notifications/push_service.dart';
 import '../auth/auth_providers.dart';
@@ -29,7 +30,13 @@ class _HomeFeedScreenState extends ConsumerState<HomeFeedScreen> {
     _scroll.addListener(_onScroll);
     // Register this device for push and mark the user online once we're in the app.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(pushServiceProvider).registerCurrentDevice();
+      final push = ref.read(pushServiceProvider);
+      push.registerCurrentDevice();
+      // Route notification taps to the relevant post / chat / profile.
+      push.wireTapToOpen((data) {
+        final path = pushTargetPath(data);
+        if (path != null && mounted) ref.read(routerProvider).push(path);
+      });
       final uid = ref.read(authStateChangesProvider).value?.uid;
       if (uid != null) {
         ref.read(presenceServiceProvider).goOnline(uid);
