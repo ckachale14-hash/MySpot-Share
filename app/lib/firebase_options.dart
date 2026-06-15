@@ -52,6 +52,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: 'REPLACE_WITH_SENDER_ID',
     projectId: 'REPLACE_WITH_PROJECT_ID',
     storageBucket: 'REPLACE_WITH_PROJECT_ID.appspot.com',
-    iosBundleId: 'com.myspot.myspot',
+    iosBundleId: 'com.myspotshare.app',
   );
 }

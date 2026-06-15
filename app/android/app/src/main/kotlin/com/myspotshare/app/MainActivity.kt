@@ -1,4 +1,4 @@
-package com.myspot.myspot
+package com.myspotshare.app
 
 import io.flutter.embedding.android.FlutterActivity
 

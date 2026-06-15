@@ -113,7 +113,7 @@ Netlify also work — point them at `app/build/web`.
 - [ ] Host **Privacy Policy** & **Terms** (sources in `docs/legal/`); fill the
       `{{PLACEHOLDERS}}`; set `AppConfig.privacyUrl/termsUrl` and the store
       listings to those URLs. Have the legal docs reviewed by an attorney.
-- [ ] Finalize **bundle IDs** (currently `com.myspot.myspot`) and **signing**.
+- [ ] Confirm **bundle IDs** (set to `com.myspotshare.app`) and **signing**.
   - **Android:** generate an upload keystore and create `android/key.properties`
     (template: `app/android/key.properties.example`). The build is already wired
     to use it and falls back to debug signing when it's absent:
