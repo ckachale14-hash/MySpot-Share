@@ -135,6 +135,7 @@ on **Vercel** (GitHub auto-deploy, Flutter SDK fetched at build time), see
 
 ### Quick reference
 ```bash
+scripts/bootstrap-dev.sh      # one-shot: flutterfire configure + deploy + seed
 scripts/preflight.sh          # verify everything is green locally
 scripts/deploy.sh dev         # deploy backend to myspot-dev
 scripts/deploy-web.sh dev     # build + deploy the web app to Firebase Hosting
