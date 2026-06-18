@@ -1,6 +1,6 @@
-# MySpot — Business Networking, Entrepreneurship & Motivation Platform
+# MySpot Share — Business Networking, Entrepreneurship & Motivation Platform
 
-A modern cross-platform (Android + iOS) social network focused entirely on
+A modern cross-platform (Android · iOS · Web) social network focused entirely on
 **entrepreneurship, business growth, motivation, and professional networking** —
 combining the best of LinkedIn, Instagram, TikTok, and Facebook, purpose-built
 for entrepreneurs, business owners, customers, investors, and professionals.
@@ -11,10 +11,39 @@ for entrepreneurs, business owners, customers, investors, and professionals.
 > experience. The "Founder Journey" is a first-class object in this platform,
 > not an afterthought.
 
-This repository contains the **complete system architecture, data model,
-security model, user flows, screen designs, integration plan, monetization
-strategy, and development roadmap** authored by a senior product/Flutter/Firebase
-architecture review. It is the blueprint the engineering team builds from.
+This repository contains **both the architecture blueprint and a complete,
+working implementation** — a Flutter app (Android · iOS · Web), a TypeScript
+Cloud Functions backend, security rules, brand identity, legal docs, a store
+listing kit, and demo seed data. Every change is compile-verified and CI-green.
+
+---
+
+## Project status
+
+**Implemented & verified** — `flutter analyze` clean · `flutter build web`
+compiles · `flutter test` **8/8** · functions `tsc` clean · **26 Firestore rules
+tests** passing (all in CI):
+
+- **App** — 64 screens across 20 feature areas: auth (email · Google · Apple ·
+  phone OTP), onboarding, paginated For-You feed + posts (text/image/**poll**/
+  **article**), stories, **Founder Journeys**, discover/search, direct & **group**
+  messaging, live streaming, business directory + reviews, notifications with
+  **deep-linking**, **block**/report, settings (notification prefs, account
+  deletion), monetization (premium + paid verification — Paystack/Flutterwave on
+  web, **RevenueCat IAP** on mobile), AI compose/image, ads manager, in-app admin.
+- **Backend** — 31 Cloud Functions: auth provisioning, counters, notifications,
+  billing webhooks, AI proxy, live tokens, moderation, **GDPR account-deletion
+  cleanup**, poll tallies.
+- **Brand** — logo → palette → Material 3 theme, app icons + web favicon, feature
+  graphic ([docs/brand/BRAND.md](docs/brand/BRAND.md)).
+- **Legal** — Privacy, Terms, Community Guidelines, Ad Policy drafts
+  ([docs/legal/](docs/legal)).
+- **Launch** — go-live runbook, deploy scripts, store listing kit, demo seed data,
+  Android signing config, web hosting (Firebase + Vercel).
+
+**Needs your accounts** (the runtime gate — see **[docs/GO-LIVE.md](docs/GO-LIVE.md)**):
+create the Firebase project (`flutterfire configure`), set secrets, deploy the
+backend, host the legal pages, capture screenshots, and submit to the stores.
 
 ---
 
@@ -42,23 +71,28 @@ architecture review. It is the blueprint the engineering team builds from.
 | 17 | [Firebase Cost Estimates](docs/17-firebase-cost-estimates.md) | Cost drivers, model, ranges at 10K/100K/1M MAU, mitigations, guardrails |
 | 18 | [Scaling & Launch](docs/18-scaling-and-launch.md) | Enterprise scale playbook, regions/compliance, abuse, launch sequence |
 
+**Build, launch & brand docs:**
+
+| Document | What's inside |
+|----------|---------------|
+| [Architecture Diagram](docs/architecture-diagram.md) | System map (client ↔ Firebase ↔ external) with the trust boundary |
+| [Go-Live Runbook](docs/GO-LIVE.md) | Ordered checklist: project → secrets → deploy → web/stores |
+| [Deploy on Vercel](docs/deploy-vercel.md) | Web preview via Vercel (Flutter build + env vars) |
+| [Brand & Color Guide](docs/brand/BRAND.md) | Logo, palette, accessibility, Flutter tokens |
+| [Privacy](docs/legal/PRIVACY.md) · [Terms](docs/legal/TERMS.md) · [Community Guidelines](docs/legal/COMMUNITY_GUIDELINES.md) · [Ad Policy](docs/legal/AD_POLICY.md) | Legal drafts (for review) |
+| [Store Listing Kit](docs/store/LISTING.md) | Copy, keywords, screenshot plan, data-safety answers |
+
 **Config artifacts** (real, ready to adapt):
 - [`firestore.rules`](firestore.rules) — production-shaped security rules ✅ *unit-tested*
 - [`storage.rules`](storage.rules) — Storage security rules
 - [`firestore.indexes.json`](firestore.indexes.json) — composite indexes for the feed/FYP/search queries
 
-**Scaffold (runnable) — P0 + P1 + P2:** [`app/`](app) (Flutter) and
-[`functions/`](functions) (TypeScript, `tsc` clean), [`test/`](test) (Firestore
-rules tests — **17 passing**), CI in [`.github/workflows`](.github/workflows).
-**Start here → [`SETUP.md`](SETUP.md).**
-- **P0:** auth (email + Google) → onboarding (handle claim) → 5-tab shell · profile.
-- **P1 social core:** posts (text + image + AI-assist) · For-You feed · likes ·
-  saves · comments · follow + public profiles · stories (24h) · founder journeys ·
-  discover (people / trending / journeys / search) · notifications (in-app + FCM).
-- **P2 monetization:** paid verification (KYC upload → **webhook-verified** payment
-  → admin review → blue tick) · premium plans · **Paystack/Flutterwave** webhooks
-  with an idempotent `payments` ledger · in-app admin verification console.
-  All entitlements are granted server-side only — the client can request, never grant.
+**Runnable app + backend:** [`app/`](app) (Flutter) and [`functions/`](functions)
+(TypeScript, `tsc` clean), [`test/`](test) (Firestore rules tests — **26 passing**),
+CI in [`.github/workflows`](.github/workflows). **Start here →
+[`docs/GO-LIVE.md`](docs/GO-LIVE.md)** (runbook) and [`SETUP.md`](SETUP.md) (detail).
+All entitlements (money, identity, ranking) are granted **server-side only** — the
+client can request, never grant.
 
 ---
 
@@ -79,8 +113,8 @@ rules tests — **17 passing**), CI in [`.github/workflows`](.github/workflows).
 | Payments (web/B2B) | **Flutterwave** + **Paystack** + **Stripe** | Pan-African cards/bank/USSD + **mobile money** (M-Pesa, MoMo, Airtel); global cards |
 | Payments (in-app) | **RevenueCat** + StoreKit/Play Billing | Store-policy-compliant subscriptions/verification on mobile |
 | AI — text | **OpenAI** (tiered: mini → standard → flagship) | Writing assistant, captions, articles, marketing copy |
-| AI — image | **Vertex AI Imagen** (Firebase AI Logic) | Promotional graphics, social content |
-| AI — video | **Vertex AI Veo** / Runway (premium-gated) | Short promo & motivational clips |
+| AI — image | **OpenAI images** | Promotional graphics, social content |
+| AI — video | **Generic provider adapter** (OpenAI/Runway/Veo, premium-gated) | Short promo & motivational clips — `AI_VIDEO_*` env |
 | Live streaming | **Agora** (or 100ms/LiveKit) | Low-latency broadcast + live chat/reactions |
 | Deep links / referrals | **Branch** (or AppsFlyer) + App/Universal Links | ⚠️ Firebase Dynamic Links is retired — do **not** use it |
 | Admin panel | **Flutter Web** on Firebase Hosting | Reuse models/code; gated by `admin` custom claim |
@@ -107,43 +141,46 @@ phases (P0 foundation → P1 social core → P2 monetization → P3 AI/live → 
 
 ---
 
-## Repository layout (target)
+## Repository layout
 
 ```
 MySpot-Share/
 ├── README.md
-├── docs/                      # this architecture set
-├── firestore.rules            # security rules (DB)
-├── storage.rules              # security rules (media)
-├── firestore.indexes.json     # composite indexes
-├── firebase.json              # Firebase project config (added at init)
-├── app/                       # Flutter application (added in P0)
-│   ├── lib/
-│   │   ├── core/              # config, theme, router, di, utils
-│   │   ├── data/              # repositories, datasources, dtos
-│   │   ├── domain/            # entities, value objects
-│   │   ├── features/          # feature-first modules (auth, feed, chat, ...)
-│   │   └── main.dart
+├── SETUP.md                   # local setup detail
+├── firebase.json · .firebaserc · firestore.rules · storage.rules
+├── firestore.indexes.json · database.rules.json
+├── docs/                      # architecture set (01–18) + …
+│   ├── architecture-diagram.md · GO-LIVE.md · deploy-vercel.md
+│   ├── brand/                 # BRAND.md, logo, palette, icons, feature graphic
+│   ├── legal/                 # PRIVACY · TERMS · COMMUNITY_GUIDELINES · AD_POLICY
+│   └── store/                 # LISTING.md (store kit)
+├── app/                       # Flutter application (Android · iOS · Web)
+│   ├── lib/{core,data,domain,features}/ + main.dart
+│   ├── android/ · ios/ · web/
 │   └── test/
-├── functions/                 # Cloud Functions (TypeScript)
-│   ├── src/
-│   └── package.json
-└── admin/                     # Flutter Web admin panel (or shared with app/)
+├── functions/                 # Cloud Functions (TypeScript, 31 functions)
+├── test/                      # Firestore rules tests (26 passing)
+├── seed/                      # idempotent demo/seed data (emulator-verified)
+└── scripts/                   # preflight · deploy · deploy-web · vercel-build
 ```
 
-The Flutter app, Functions, and admin panel are scaffolded in **Phase P0** of the
-roadmap. This repo currently holds the **architecture and contracts** that those
-implementations must satisfy.
+The admin panel is **in-app** (screens gated by the `admin`/`moderator` claim), not
+a separate target. Anything `flutterfire`/CLI-generated (`firebase_options.dart`
+real values, `google-services.json`, `key.properties`, keystores) is gitignored.
 
 ---
 
-## How to use this blueprint
+## Build & ship
 
-1. Read [01 System Architecture](docs/01-system-architecture.md) end-to-end.
-2. Stand up a Firebase project; deploy [`firestore.rules`](firestore.rules),
-   [`storage.rules`](storage.rules), and [`firestore.indexes.json`](firestore.indexes.json).
-3. Scaffold the Flutter app per [09 Flutter Architecture](docs/09-flutter-architecture.md).
-4. Implement features in roadmap order, using [02 Data Model](docs/02-firestore-data-model.md)
-   and [10 Cloud Functions](docs/10-cloud-functions.md) as the contracts.
-5. Wire monetization per [07](docs/07-monetization.md) **early** — store review and
-   payment compliance are long-pole items.
+1. **Run it now:** `cd app && flutter run -d chrome` (or a device). For populated
+   screens, seed demo data — see [`seed/`](seed).
+2. **Verify:** `scripts/preflight.sh` (functions build + analyze + test + rules).
+3. **Go live:** follow **[docs/GO-LIVE.md](docs/GO-LIVE.md)** — create the Firebase
+   project (`flutterfire configure`), set secrets, `scripts/deploy.sh dev`, then
+   `scripts/deploy-web.sh dev` (web) or [Vercel](docs/deploy-vercel.md).
+4. **Ship:** signing + store listings per GO-LIVE Phase 8 and
+   [the listing kit](docs/store/LISTING.md).
+
+New to the codebase? Read [01 System Architecture](docs/01-system-architecture.md)
+and the [architecture diagram](docs/architecture-diagram.md), then
+[09 Flutter Architecture](docs/09-flutter-architecture.md).
