@@ -106,8 +106,10 @@ project, free tier):
 ```bash
 scripts/deploy-web.sh dev            # build + deploy → https://<project>.web.app
 ```
-Hosting is configured in `firebase.json` (SPA rewrite to `index.html`). Vercel /
-Netlify also work — point them at `app/build/web`.
+Hosting is configured in `firebase.json` (SPA rewrite to `index.html`). To host
+on **Vercel** (GitHub auto-deploy, Flutter SDK fetched at build time), see
+[`docs/deploy-vercel.md`](deploy-vercel.md). Netlify also works — point it at
+`app/build/web`.
 
 ## Phase 8 — Store prep (when ready)
 - [ ] Host **Privacy Policy** & **Terms** (sources in `docs/legal/`); fill the

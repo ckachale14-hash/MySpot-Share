@@ -20,11 +20,26 @@ Future<void> main() async {
 
   // App Check gates the backend (callables enforce it). Debug providers are used
   // in debug builds; switch to Play Integrity / DeviceCheck for release.
-  await FirebaseAppCheck.instance.activate(
-    androidProvider:
-        kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
-  );
+  //
+  // Web needs an explicit reCAPTCHA provider — calling activate() without one on
+  // web throws at startup. We only activate on web when a site key is supplied
+  // (RECAPTCHA_V3_SITE_KEY via --dart-define / Vercel env); otherwise we skip it
+  // so the app still boots. Register the key in Firebase Console → App Check.
+  const recaptchaSiteKey = String.fromEnvironment('RECAPTCHA_V3_SITE_KEY');
+  if (kIsWeb) {
+    if (recaptchaSiteKey.isNotEmpty) {
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(recaptchaSiteKey),
+      );
+    }
+  } else {
+    await FirebaseAppCheck.instance.activate(
+      androidProvider:
+          kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+      appleProvider:
+          kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+    );
+  }
 
   // Crash reporting, performance, and analytics (Crashlytics/Perf are
   // mobile-only and no-op on web).
