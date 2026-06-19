@@ -58,3 +58,32 @@ app). When absent, the app still boots but App Check is off on web.
 - `vercel.json` rewrites all unmatched paths to `/index.html` for SPA routing;
   static assets are still served directly because rewrites run after the
   filesystem check.
+
+## Troubleshooting: the app loads to a blank / unresponsive page
+
+This almost always means the Firebase web config didn't make it into the build,
+so `Firebase.initializeApp` fails before the UI renders. The app now detects this
+and shows an on-screen diagnostic (listing the missing variables) instead of a
+blank page — but the underlying fix is in Vercel:
+
+1. **Names must match exactly.** The variables in Vercel must be named exactly as
+   in the table above (e.g. `FIREBASE_WEB_API_KEY`, not `apiKey` /
+   `NEXT_PUBLIC_...` / `VITE_...`). Names are case-sensitive. The build only
+   forwards variables it recognizes; anything else is ignored and the
+   `REPLACE_*` placeholder is used.
+2. **Set them for the right Environment.** Add each value to the **Production**
+   environment (and Preview, if you open preview deploys). A variable scoped to
+   Preview only won't be present in a Production build.
+3. **Redeploy after editing env vars.** Vercel bakes env vars in at *build* time
+   via `--dart-define`. Adding a variable does **not** retroactively fix a build
+   that already ran — trigger a new deploy (or push a commit) so the build picks
+   it up.
+4. **Confirm the build actually used them.** In the Vercel deploy logs the build
+   step prints `Building web (release) with N dart-define(s)`. If `N` is `0` (or
+   fewer than expected), the env vars weren't visible to the build — recheck
+   steps 1–2.
+
+Once the page loads, the two remaining "works locally, fails on Vercel" gotchas
+are sign-in and App Check (see **After the first deploy** above): add the Vercel
+domain to Firebase **Authorized domains**, and either set `RECAPTCHA_V3_SITE_KEY`
++ register the domain in **App Check**, or leave App Check unenforced for web.
