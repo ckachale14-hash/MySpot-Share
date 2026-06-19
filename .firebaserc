@@ -1,8 +1,7 @@
 {
   "projects": {
-    "default": "myspot-dev",
-    "dev": "myspot-dev",
-    "staging": "myspot-staging",
-    "prod": "myspot-prod"
+    "default": "portionspot-motors",
+    "dev": "portionspot-motors",
+    "prod": "portionspot-motors"
   }
 }
