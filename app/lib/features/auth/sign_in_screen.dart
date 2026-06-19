@@ -59,22 +59,35 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         case 'weak-password':
           return 'Please choose a stronger password (at least 6 characters).';
         case 'operation-not-allowed':
-          return 'This sign-in method isn\'t enabled. Contact support.';
+          return 'This sign-in method isn\'t enabled in Firebase. '
+              'Enable it under Authentication → Sign-in method.';
         case 'too-many-requests':
           return 'Too many attempts. Please wait a moment and try again.';
         case 'network-request-failed':
           return 'Network error. Check your connection and try again.';
         case 'popup-closed-by-user':
         case 'cancelled-popup-request':
+        case 'user-cancelled':
         case 'web-context-cancelled':
           return 'Sign-in was cancelled.';
+        case 'popup-blocked':
+          return 'Your browser blocked the sign-in popup. '
+              'Allow popups for this site and try again.';
+        case 'unauthorized-domain':
+          return 'This domain isn\'t authorized for sign-in. Add it under '
+              'Firebase Authentication → Settings → Authorized domains.';
         case 'account-exists-with-different-credential':
           return 'An account already exists with a different sign-in method.';
         default:
-          return error.message ?? 'Something went wrong. Please try again.';
+          // Surface the code so unmapped failures are diagnosable instead of
+          // showing an opaque "Error".
+          final msg = error.message;
+          return msg == null || msg.isEmpty || msg == 'Error'
+              ? 'Sign-in failed (${error.code}).'
+              : 'Sign-in failed (${error.code}): $msg';
       }
     }
-    return 'Something went wrong. Please try again.';
+    return 'Something went wrong: $error';
   }
 
   @override
