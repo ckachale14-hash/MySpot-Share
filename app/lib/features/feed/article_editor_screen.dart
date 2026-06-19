@@ -59,13 +59,21 @@ class _ArticleEditorScreenState extends ConsumerState<ArticleEditorScreen> {
     }
     setState(() => _busy = true);
     try {
-      await ref.read(postRepositoryProvider).createPost(
+      final entities = parseEntities(body);
+      final repo = ref.read(postRepositoryProvider);
+      // Best-effort: a mention-lookup failure must never block publishing.
+      List<String> mentions = const [];
+      try {
+        mentions = await repo.resolveMentionUids(entities.mentionHandles);
+      } catch (_) {}
+      await repo.createPost(
             author: author,
             type: PostType.article,
             title: title,
             text: body,
             media: _cover != null ? [_cover!] : const [],
-            hashtags: parseEntities(body).hashtags,
+            hashtags: entities.hashtags,
+            mentions: mentions,
             visibility: _visibility,
           );
       if (mounted) Navigator.of(context).pop();

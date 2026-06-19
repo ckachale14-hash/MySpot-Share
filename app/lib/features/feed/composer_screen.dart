@@ -82,10 +82,10 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
   }
 
   Future<void> _generateImage() async {
+    final c = TextEditingController();
     final prompt = await showDialog<String>(
       context: context,
       builder: (ctx) {
-        final c = TextEditingController();
         return AlertDialog(
           title: const Text('Generate an image'),
           content: TextField(
@@ -104,6 +104,7 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
         );
       },
     );
+    c.dispose();
     if (prompt == null || prompt.isEmpty) return;
     setState(() => _aiImgBusy = true);
     try {
@@ -158,12 +159,19 @@ class _ComposerScreenState extends ConsumerState<ComposerScreen> {
     setState(() => _busy = true);
     try {
       final entities = parseEntities(text);
-      await ref.read(postRepositoryProvider).createPost(
+      final repo = ref.read(postRepositoryProvider);
+      // Best-effort: a mention-lookup failure must never block the post.
+      List<String> mentions = const [];
+      try {
+        mentions = await repo.resolveMentionUids(entities.mentionHandles);
+      } catch (_) {}
+      await repo.createPost(
             author: author,
             type: _image != null ? PostType.image : PostType.text,
             text: text,
             media: _image != null ? [_image!] : const [],
             hashtags: entities.hashtags,
+            mentions: mentions,
             visibility: _visibility,
           );
       if (mounted) Navigator.of(context).pop();

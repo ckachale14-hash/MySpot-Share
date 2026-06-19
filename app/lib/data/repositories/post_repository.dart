@@ -214,6 +214,23 @@ class PostRepository {
         'status': 'open',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+  /// Resolve `@mention` handles (lowercased, no leading `@`) to user uids so the
+  /// onPostCreate Function can notify them. Handles that don't match a user are
+  /// dropped. Queried in chunks of 10 to respect Firestore's `whereIn` limit.
+  Future<List<String>> resolveMentionUids(List<String> handles) async {
+    if (handles.isEmpty) return const [];
+    final uids = <String>[];
+    for (var i = 0; i < handles.length; i += 10) {
+      final end = (i + 10 > handles.length) ? handles.length : i + 10;
+      final snap = await _db
+          .collection('users')
+          .where('handle', whereIn: handles.sublist(i, end))
+          .get();
+      uids.addAll(snap.docs.map((d) => d.id));
+    }
+    return uids;
+  }
 }
 
 /// Extract `#hashtags` and `@mentions` (handles) from composer text.
