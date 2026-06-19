@@ -4,5 +4,15 @@
   "installCommand": "echo 'Flutter SDK is fetched in the build step (scripts/vercel-build.sh)'",
   "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "app/build/web",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://portionspot-motors.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/__/firebase/:path*",
+      "destination": "https://portionspot-motors.firebaseapp.com/__/firebase/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
