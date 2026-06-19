@@ -32,6 +32,18 @@ cd "$(dirname "$0")/../app"
 echo "▶ flutter pub get"
 flutter pub get
 
+# Diagnostic: show which expected web env vars are visible to THIS build (names
+# and lengths only — never the values). If these say MISSING, the variable isn't
+# set for the environment this deployment targets (e.g. set for Preview but not
+# Production), or the name doesn't match exactly.
+echo "▶ Firebase web env presence (no values shown):"
+for v in FIREBASE_WEB_API_KEY FIREBASE_WEB_APP_ID FIREBASE_MESSAGING_SENDER_ID \
+         FIREBASE_PROJECT_ID FIREBASE_AUTH_DOMAIN FIREBASE_STORAGE_BUCKET \
+         RECAPTCHA_V3_SITE_KEY; do
+  val="${!v:-}"
+  if [ -n "$val" ]; then echo "   $v = present (len ${#val})"; else echo "   $v = MISSING"; fi
+done
+
 # Build only the --dart-define flags whose env var is set, so unset values keep
 # the in-code defaults instead of being overridden with an empty string.
 DEFINES=()
