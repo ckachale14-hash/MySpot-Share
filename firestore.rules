@@ -157,6 +157,13 @@ service cloud.firestore {
         allow update: if false;
       }
 
+      // share edge: presence at /shares/{uid}; shareCount maintained by onShareWrite
+      match /shares/{shareUid} {
+        allow read:   if isSignedIn();
+        allow create, delete: if isUser(shareUid);
+        allow update: if false;
+      }
+
       // poll vote: one per user; tallies maintained by onPollVoteWrite
       match /votes/{voterUid} {
         allow read: if isSignedIn();

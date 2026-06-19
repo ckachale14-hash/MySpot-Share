@@ -17,15 +17,8 @@ class StoryViewerScreen extends ConsumerStatefulWidget {
 }
 
 class _StoryViewerScreenState extends ConsumerState<StoryViewerScreen> {
-  final _controller = PageController();
   final _recorded = <String>{};
   int _index = 0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   void _recordView(Story s) {
     final uid = ref.read(authStateChangesProvider).value?.uid;

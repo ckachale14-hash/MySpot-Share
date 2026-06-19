@@ -147,6 +147,13 @@ class PostRepository {
         : ref.delete();
   }
 
+  // ---- shares (edge at posts/{id}/shares/{uid}; shareCount maintained by a
+  // Function). Keyed by uid so the count reflects unique sharers, like likes.
+  Future<void> recordShare(String postId, String uid) =>
+      _posts.doc(postId).collection('shares').doc(uid).set({
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
   // ---- saves (private bookmark at users/{uid}/saved/{postId})
   Stream<bool> watchSaved(String postId, String uid) => _db
       .doc('users/$uid/saved/$postId')

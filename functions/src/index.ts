@@ -13,6 +13,7 @@ export { registerDevice } from "./auth/registerDevice";
 // Feed & engagement (P1)
 export { onPostCreate, onPostDelete } from "./feed/onPostWrite";
 export { onLikeWrite } from "./engagement/onLikeWrite";
+export { onShareWrite } from "./engagement/onShareWrite";
 export { onCommentCreate, onCommentDelete } from "./engagement/onCommentWrite";
 export { onFollowWrite } from "./engagement/onFollowWrite";
 export { onPollVoteWrite } from "./engagement/onPollVoteWrite";

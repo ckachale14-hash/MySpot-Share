@@ -73,7 +73,8 @@ class PostCard extends ConsumerWidget {
                     visualDensity: VisualDensity.compact,
                     labelStyle: t.textTheme.labelSmall,
                   ),
-                PopupMenuButton<String>(
+                if (uid != null && uid != post.authorId)
+                  PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
                   onSelected: (v) async {
                     if (v == 'report' && uid != null) {
@@ -118,9 +119,8 @@ class PostCard extends ConsumerWidget {
                   },
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'report', child: Text('Report')),
-                    if (uid != null && uid != post.authorId)
-                      const PopupMenuItem(
-                          value: 'block', child: Text('Block author')),
+                    const PopupMenuItem(
+                        value: 'block', child: Text('Block author')),
                   ],
                 ),
               ],
@@ -173,8 +173,11 @@ class PostCard extends ConsumerWidget {
                 _Action(
                   icon: Icons.share_outlined,
                   label: '${post.shareCount}',
-                  onTap: () => Share.share(
-                      '${post.author.displayName} on MySpot: ${post.text}'),
+                  onTap: () async {
+                    await Share.share(
+                        '${post.author.displayName} on MySpot: ${post.text}');
+                    if (uid != null) repo.recordShare(post.id, uid);
+                  },
                 ),
                 const Spacer(),
                 IconButton(
