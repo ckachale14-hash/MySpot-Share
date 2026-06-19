@@ -29,6 +29,14 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
+    // On web the google_sign_in plugin's signIn() is unsupported and throws a
+    // null-check error; use Firebase Auth's popup flow instead. Native platforms
+    // keep the google_sign_in flow to get a proper account picker.
+    if (kIsWeb) {
+      final provider = GoogleAuthProvider()..addScope('email');
+      await _auth.signInWithPopup(provider);
+      return;
+    }
     final googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) return; // user cancelled
     final googleAuth = await googleUser.authentication;
@@ -84,12 +92,12 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<void> deleteAccount() async {
     // Deleting the auth user fires the onUserDelete Function (GDPR cleanup).
     await _auth.currentUser?.delete();
-    await GoogleSignIn().signOut();
+    if (!kIsWeb) await GoogleSignIn().signOut();
   }
 
   @override
   Future<void> signOut() async {
-    await GoogleSignIn().signOut();
+    if (!kIsWeb) await GoogleSignIn().signOut();
     await _auth.signOut();
   }
 }
