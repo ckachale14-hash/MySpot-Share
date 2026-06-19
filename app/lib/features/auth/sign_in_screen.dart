@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,11 +34,47 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(_friendlyError(e))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Turns raw auth exceptions into messages a person can actually act on.
+  String _friendlyError(Object error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'invalid-email':
+          return 'That email address doesn\'t look right.';
+        case 'user-disabled':
+          return 'This account has been disabled. Contact support for help.';
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          return 'Incorrect email or password.';
+        case 'email-already-in-use':
+          return 'An account already exists for that email. Try signing in.';
+        case 'weak-password':
+          return 'Please choose a stronger password (at least 6 characters).';
+        case 'operation-not-allowed':
+          return 'This sign-in method isn\'t enabled. Contact support.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please wait a moment and try again.';
+        case 'network-request-failed':
+          return 'Network error. Check your connection and try again.';
+        case 'popup-closed-by-user':
+        case 'cancelled-popup-request':
+        case 'web-context-cancelled':
+          return 'Sign-in was cancelled.';
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with a different sign-in method.';
+        default:
+          return error.message ?? 'Something went wrong. Please try again.';
+      }
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   @override
