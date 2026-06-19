@@ -68,7 +68,11 @@ export const onPostDelete = onDocumentDeleted("posts/{postId}", async (event) =>
   for (const tag of cleanTags(post.hashtags)) {
     batch.set(
       db.doc(`hashtags/${tag}`),
-      { postCount: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+      {
+        postCount: FieldValue.increment(-1),
+        score: FieldValue.increment(-1),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
       { merge: true }
     );
   }

@@ -18,6 +18,12 @@ export { onFollowWrite } from "./engagement/onFollowWrite";
 export { onPollVoteWrite } from "./engagement/onPollVoteWrite";
 export { onBlockCreate } from "./engagement/onBlockCreate";
 
+// Stories
+export { sweepExpiredStories } from "./stories/sweepExpiredStories";
+
+// Ranking
+export { recomputeScores } from "./ranking/recomputeScores";
+
 // Messaging (P3)
 export { onMessageCreate } from "./messaging/onMessageCreate";
 
