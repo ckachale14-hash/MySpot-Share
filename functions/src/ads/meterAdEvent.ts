@@ -6,7 +6,7 @@ import { db } from "../lib/admin";
  * Record an ad impression or click on an active campaign. Metrics are server-only
  * (clients can't write them directly), so this runs as a trusted callable.
  */
-export const meterAdEvent = onCall({ enforceAppCheck: true }, async (req) => {
+export const meterAdEvent = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
 

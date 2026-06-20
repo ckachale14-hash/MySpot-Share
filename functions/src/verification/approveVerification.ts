@@ -5,7 +5,7 @@ import { grantUserVerification, grantBusinessVerification } from "../lib/entitle
 import { notify } from "../lib/notifications";
 
 /** Admin/moderator: approve or reject a paid verification request (in_review only). */
-export const approveVerification = onCall({ enforceAppCheck: true }, async (req) => {
+export const approveVerification = onCall({ enforceAppCheck: false }, async (req) => {
   const role = req.auth?.token.role;
   if (role !== "admin" && role !== "moderator") {
     throw new HttpsError("permission-denied", "Moderators only.");

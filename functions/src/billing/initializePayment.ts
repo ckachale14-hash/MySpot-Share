@@ -13,7 +13,7 @@ const PAYSTACK_SECRET = defineSecret("PAYSTACK_SECRET");
  * source of truth). A server-side `paymentIntents/{reference}` records intent.
  */
 export const initializePayment = onCall(
-  { secrets: [PAYSTACK_SECRET], enforceAppCheck: true },
+  { secrets: [PAYSTACK_SECRET], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");

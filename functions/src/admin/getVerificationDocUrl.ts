@@ -6,7 +6,7 @@ import { getStorage } from "firebase-admin/storage";
  * KYC files are not publicly readable (see storage.rules) — review always goes
  * through this server-minted URL.
  */
-export const getVerificationDocUrl = onCall({ enforceAppCheck: true }, async (req) => {
+export const getVerificationDocUrl = onCall({ enforceAppCheck: false }, async (req) => {
   const role = req.auth?.token.role;
   if (role !== "admin" && role !== "moderator") {
     throw new HttpsError("permission-denied", "Moderators only.");

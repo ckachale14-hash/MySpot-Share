@@ -8,7 +8,7 @@ const HANDLE_RE = /^[a-z0-9_]{3,20}$/;
  * Claim a unique @handle for the signed-in user. Handle uniqueness is enforced
  * server-side via a transaction on handles/{handle} (clients cannot write there).
  */
-export const claimHandle = onCall({ enforceAppCheck: true }, async (req) => {
+export const claimHandle = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
 

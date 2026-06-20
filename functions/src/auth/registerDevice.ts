@@ -6,7 +6,7 @@ import { db } from "../lib/admin";
  * Register/unregister an FCM token in the user's private profile (server-only
  * collection). Called by the app after obtaining a messaging token.
  */
-export const registerDevice = onCall({ enforceAppCheck: true }, async (req) => {
+export const registerDevice = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
 

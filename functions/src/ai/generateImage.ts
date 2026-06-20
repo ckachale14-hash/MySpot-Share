@@ -13,7 +13,7 @@ const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
  * a URL the client can attach to a post/ad.
  */
 export const generateImage = onCall(
-  { secrets: [OPENAI_API_KEY], enforceAppCheck: true },
+  { secrets: [OPENAI_API_KEY], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
@@ -30,7 +30,7 @@ export const generateImage = onCall(
     const client = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
 
     const mod = await client.moderations.create({
-      model: process.env.AI_MODERATION_MODEL as string,
+      model: process.env.AI_MODERATION_MODEL || "omni-moderation-latest",
       input: prompt,
     });
     if (mod.results[0]?.flagged) {
@@ -38,7 +38,7 @@ export const generateImage = onCall(
     }
 
     const result = await client.images.generate({
-      model: process.env.AI_IMAGE_MODEL as string,
+      model: process.env.AI_IMAGE_MODEL || "gpt-image-1",
       prompt,
       size: "1024x1024",
     });

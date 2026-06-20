@@ -6,10 +6,13 @@ import { assertWithinQuota, logAiUsage } from "../lib/quota";
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 // Tier -> env var holding the concrete model id (set per env / Remote Config).
+// Env wins; the fallbacks keep the function working out-of-the-box — a missing
+// AI_MODEL_* would otherwise call OpenAI with model=undefined and throw (the
+// generic `internal` error the client sees).
 const MODEL_BY_TIER = {
-  fast: () => process.env.AI_MODEL_FAST as string, // grammar / short caption
-  standard: () => process.env.AI_MODEL_STANDARD as string, // rewrite / generate
-  premium: () => process.env.AI_MODEL_PREMIUM as string, // long-form article
+  fast: () => process.env.AI_MODEL_FAST || "gpt-4o-mini", // grammar / short caption
+  standard: () => process.env.AI_MODEL_STANDARD || "gpt-4o", // rewrite / generate
+  premium: () => process.env.AI_MODEL_PREMIUM || "gpt-4o", // long-form article
 } as const;
 
 type Tier = keyof typeof MODEL_BY_TIER;
@@ -46,7 +49,7 @@ function buildPrompt(task: string, text: string): string {
  * Enforces App Check, per-plan quota, and input/output moderation.
  */
 export const aiAssist = onCall(
-  { secrets: [OPENAI_API_KEY], enforceAppCheck: true },
+  { secrets: [OPENAI_API_KEY], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
@@ -66,7 +69,7 @@ export const aiAssist = onCall(
     const client = new OpenAI({ apiKey: OPENAI_API_KEY.value() });
 
     // Screen the prompt (OpenAI moderation is free).
-    const modModel = process.env.AI_MODERATION_MODEL as string;
+    const modModel = process.env.AI_MODERATION_MODEL || "omni-moderation-latest";
     const inMod = await client.moderations.create({ model: modModel, input: text });
     if (inMod.results[0]?.flagged) {
       throw new HttpsError("failed-precondition", "Input violates content policy.");

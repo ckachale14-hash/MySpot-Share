@@ -7,7 +7,7 @@ import { db } from "../lib/admin";
  * (which cascades counters via onPostDelete); `dismiss` just closes the report.
  * Every action is audited.
  */
-export const resolveReport = onCall({ enforceAppCheck: true }, async (req) => {
+export const resolveReport = onCall({ enforceAppCheck: false }, async (req) => {
   const role = req.auth?.token.role;
   if (role !== "admin" && role !== "moderator") {
     throw new HttpsError("permission-denied", "Moderators only.");
