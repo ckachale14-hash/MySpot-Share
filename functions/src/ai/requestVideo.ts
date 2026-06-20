@@ -17,7 +17,7 @@ const AI_VIDEO_API_KEY = defineSecret("AI_VIDEO_API_KEY");
  * OpenAI video / Runway / Pika / Veo without code changes — see .env.example.
  */
 export const requestVideo = onCall(
-  { secrets: [OPENAI_API_KEY, AI_VIDEO_API_KEY], enforceAppCheck: true },
+  { secrets: [OPENAI_API_KEY, AI_VIDEO_API_KEY], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");

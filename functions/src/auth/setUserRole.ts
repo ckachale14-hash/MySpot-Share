@@ -8,7 +8,7 @@ const ROLES = ["user", "moderator", "admin"] as const;
  * Admin-only: set a user's role. Updates the custom claim (authority) and the
  * mirrored users/{uid}.role field, and writes an audit record.
  */
-export const setUserRole = onCall({ enforceAppCheck: true }, async (req) => {
+export const setUserRole = onCall({ enforceAppCheck: false }, async (req) => {
   if (req.auth?.token.role !== "admin") {
     throw new HttpsError("permission-denied", "Admin only.");
   }

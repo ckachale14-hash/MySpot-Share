@@ -8,7 +8,7 @@ const AGORA_APP_CERTIFICATE = defineSecret("AGORA_APP_CERTIFICATE");
 
 /** Viewer joins a live stream: mint a subscriber token and bump viewer count. */
 export const joinLiveStream = onCall(
-  { secrets: [AGORA_APP_CERTIFICATE], enforceAppCheck: true },
+  { secrets: [AGORA_APP_CERTIFICATE], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");

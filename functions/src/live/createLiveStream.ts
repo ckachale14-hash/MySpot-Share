@@ -8,7 +8,7 @@ const AGORA_APP_CERTIFICATE = defineSecret("AGORA_APP_CERTIFICATE");
 
 /** Host starts a live stream: create the doc and mint a publisher token. */
 export const createLiveStream = onCall(
-  { secrets: [AGORA_APP_CERTIFICATE], enforceAppCheck: true },
+  { secrets: [AGORA_APP_CERTIFICATE], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");

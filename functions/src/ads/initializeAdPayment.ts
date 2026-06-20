@@ -7,7 +7,7 @@ const PAYSTACK_SECRET = defineSecret("PAYSTACK_SECRET");
 
 /** Fund an ad campaign (advertiser-chosen budget) via Paystack hosted checkout. */
 export const initializeAdPayment = onCall(
-  { secrets: [PAYSTACK_SECRET], enforceAppCheck: true },
+  { secrets: [PAYSTACK_SECRET], enforceAppCheck: false },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");

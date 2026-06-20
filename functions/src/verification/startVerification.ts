@@ -11,7 +11,7 @@ type DocRef = { storagePath: string; kind: string };
  * The request starts as `pending_payment`; only a verified payment webhook can
  * advance it to review (see billing/paystackWebhook).
  */
-export const startVerification = onCall({ enforceAppCheck: true }, async (req) => {
+export const startVerification = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
 

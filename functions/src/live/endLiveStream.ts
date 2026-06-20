@@ -3,7 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../lib/admin";
 
 /** Host ends a live stream. */
-export const endLiveStream = onCall({ enforceAppCheck: true }, async (req) => {
+export const endLiveStream = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
 
@@ -20,7 +20,7 @@ export const endLiveStream = onCall({ enforceAppCheck: true }, async (req) => {
 });
 
 /** Viewer leaves: decrement the live viewer count. */
-export const leaveLiveStream = onCall({ enforceAppCheck: true }, async (req) => {
+export const leaveLiveStream = onCall({ enforceAppCheck: false }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
   const streamId = String(req.data?.streamId ?? "");

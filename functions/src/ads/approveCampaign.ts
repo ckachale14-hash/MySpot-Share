@@ -5,7 +5,7 @@ import { notify } from "../lib/notifications";
 
 /** Admin/moderator: approve or reject a funded ad campaign (pending_review only).
  * Approving marks the boosted post as sponsored so it surfaces with a label. */
-export const approveCampaign = onCall({ enforceAppCheck: true }, async (req) => {
+export const approveCampaign = onCall({ enforceAppCheck: false }, async (req) => {
   const role = req.auth?.token.role;
   if (role !== "admin" && role !== "moderator") {
     throw new HttpsError("permission-denied", "Moderators only.");

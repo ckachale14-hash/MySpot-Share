@@ -1,0 +1,62 @@
+name: Deploy backend
+
+# Deploys Cloud Functions + Firestore/Storage rules and indexes to the live
+# Firebase project. Runs automatically when backend files change on main, and
+# can be triggered by hand from the Actions tab.
+#
+# Requires one repo secret: FIREBASE_SERVICE_ACCOUNT
+#   A Google Cloud service-account JSON key for portionspot-motors with deploy
+#   permissions. See docs/DEPLOY-BACKEND.md for how to create it and which roles
+#   it needs. The function runtime secrets (OPENAI_API_KEY, etc.) live in Secret
+#   Manager — set them once with `firebase functions:secrets:set`; this workflow
+#   does not need their values.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "storage.rules"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+# Never run two deploys at once; cancel an in-flight one if a newer push lands.
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Functions + rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install + build functions
+        working-directory: functions
+        run: |
+          npm ci
+          npm run build
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      # firebase-tools picks up GOOGLE_APPLICATION_CREDENTIALS (set by the auth
+      # step above) automatically — no token needed.
+      - name: Deploy functions + rules
+        run: >
+          npx --yes firebase-tools deploy
+          --only functions,firestore,storage
+          --project portionspot-motors
+          --non-interactive
+          --force
