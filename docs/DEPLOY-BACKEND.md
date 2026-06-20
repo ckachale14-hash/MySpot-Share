@@ -105,6 +105,61 @@ Tail logs while testing: `cd functions && npm run logs`.
   model IDs if the `AI_MODEL_*` env vars are unset, so a missing model can't
   cause the `internal` error. `functions/.env.example` now has real IDs.
 
+---
+
+## Automated deploys (GitHub Actions)
+
+`.github/workflows/deploy-backend.yml` redeploys the backend automatically on
+every push to `main` that touches `functions/**` or the rules, and you can also
+run it on demand from the repo's **Actions** tab → **Deploy backend** → **Run
+workflow**. After it's set up you never have to run `firebase deploy` by hand.
+
+It needs **one** repository secret — a Google Cloud service-account key. (The
+function runtime secrets you set in step 2 stay in Secret Manager; CI doesn't
+need their values, only permission to deploy.)
+
+### One-time setup
+
+1. **Create a service account + key** (Cloud Console → IAM & Admin → Service
+   Accounts → Create, for project `portionspot-motors`). Grant it these roles —
+   the simplest reliable set for deploying v2 functions + rules:
+   - Firebase Admin
+   - Cloud Functions Admin
+   - Cloud Run Admin
+   - Artifact Registry Administrator
+   - Service Account User
+   - Secret Manager Admin
+
+   (If you'd rather not fiddle with roles, **Editor** + **Firebase Admin** +
+   **Service Account User** also works.) Then **Keys → Add key → JSON** and
+   download the file.
+
+   Or via gcloud:
+   ```bash
+   gcloud iam service-accounts create gh-deployer \
+     --project portionspot-motors --display-name "GitHub deployer"
+   SA=gh-deployer@portionspot-motors.iam.gserviceaccount.com
+   for r in firebase.admin cloudfunctions.admin run.admin \
+            artifactregistry.admin iam.serviceAccountUser secretmanager.admin; do
+     gcloud projects add-iam-policy-binding portionspot-motors \
+       --member "serviceAccount:$SA" --role "roles/$r"
+   done
+   gcloud iam service-accounts keys create key.json --iam-account "$SA"
+   ```
+
+2. **Add the key as a repo secret.** GitHub → repo **Settings** → Secrets and
+   variables → **Actions** → New repository secret:
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Value: the **entire contents** of the JSON key file.
+
+3. Push to `main` (or run the workflow manually). Done — backend changes now
+   ship automatically.
+
+> Still do step 2 of the manual guide (`firebase functions:secrets:set …`) once,
+> so the runtime secrets exist in Secret Manager before the first CI deploy.
+
+---
+
 ## Before a real launch — re-enable App Check
 
 1. Create a **reCAPTCHA v3** site key, register it in Firebase Console → App
