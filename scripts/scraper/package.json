@@ -1,0 +1,17 @@
+{
+  "name": "ctr-zimbabwe-parts-scraper",
+  "version": "1.0.0",
+  "description": "Scraper for CTR aftermarket car parts targeting most common Zimbabwe vehicles",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "scrape:resume": "node scraper.js --resume",
+    "scrape:brand": "node scraper.js --brand",
+    "explore": "node explore.js"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0",
+    "csv-writer": "^1.6.0",
+    "axios": "^1.7.0"
+  }
+}
