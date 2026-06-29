@@ -1,19 +1,23 @@
 /**
  * scraper.js — CTR Aftermarket Zimbabwe Car Parts Scraper
  *
- * Targets: https://aftermarket.ctr.co.kr
+ * Uses CTR's own URL-based catalog API (discovered from Google-indexed URLs):
+ *   List:   /Catalogue/SearchList?location=<LOC>&searchLocation=global&brand=<BRAND>&model=<MODEL>&year2=<YEAR>&groups=<GROUP>
+ *   Detail: /Catalogue/SearchDetail?loc=global&searchLoc=<LOC>&oe_id=<ID>
+ *
  * Output:  scripts/scraper/output/
- *            parts.json          — all parts as structured JSON
- *            parts.csv           — flat CSV for spreadsheet import
- *            images/             — downloaded part images
- *            progress.json       — resume checkpoint
+ *   parts.json      — structured JSON for all parts
+ *   parts.csv       — flat CSV for spreadsheet import
+ *   images/         — downloaded part images
+ *   progress.json   — resume checkpoint
  *
  * Usage:
- *   npm install
- *   node scraper.js              # full run
- *   node scraper.js --resume     # resume from last checkpoint
- *   node scraper.js --brand TOYOTA   # only scrape one brand
- *   node scraper.js --dry-run    # print what would be scraped without fetching
+ *   npm install && npx playwright install chromium
+ *   node scraper.js              # full scrape, all vehicles + groups
+ *   node scraper.js --resume     # pick up where it left off
+ *   node scraper.js --brand TOYOTA
+ *   node scraper.js --group SUSPENSION
+ *   node scraper.js --dry-run    # print search URLs without fetching
  */
 
 'use strict';
@@ -24,7 +28,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-const VEHICLES = require('./zimbabwe-vehicles');
+const { ZIMBABWE_VEHICLES, CTR_GROUPS } = require('./zimbabwe-vehicles');
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 const CONFIG = {
@@ -35,15 +39,17 @@ const CONFIG = {
   partsFile: path.join(__dirname, 'output', 'parts.json'),
   csvFile: path.join(__dirname, 'output', 'parts.csv'),
 
-  // Rate-limiting: be polite to the server
-  delayBetweenRequests: 1500,   // ms between page loads
-  delayBetweenVehicles: 3000,   // ms between vehicles
+  delayBetweenPages: 1200,    // ms between list/detail page loads
+  delayBetweenVehicles: 2500, // ms between vehicle+group combos
   maxRetries: 3,
   pageTimeout: 45000,
 
-  // Set true to skip image downloads (faster)
   downloadImages: true,
-  maxImagesPerPart: 5,
+  maxImagesPerPart: 6,
+
+  // 'JP' captures Japanese-market OEM numbers (most Zimbabwe grey imports)
+  // 'ZA' adds South-Africa-spec OEM numbers for locally-sold models
+  searchLocations: ['JP', 'ZA'],
 
   userAgent:
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -55,609 +61,464 @@ const args = process.argv.slice(2);
 const FLAG_RESUME = args.includes('--resume');
 const FLAG_DRY_RUN = args.includes('--dry-run');
 const brandFilter = (() => {
-  const idx = args.indexOf('--brand');
-  return idx !== -1 ? args[idx + 1]?.toUpperCase() : null;
+  const i = args.indexOf('--brand');
+  return i !== -1 ? args[i + 1]?.toUpperCase() : null;
+})();
+const groupFilter = (() => {
+  const i = args.indexOf('--group');
+  return i !== -1 ? args[i + 1]?.toUpperCase() : null;
 })();
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function log(msg, ...rest) {
-  console.log(`[${new Date().toISOString()}] ${msg}`, ...rest);
+  console.log(`[${new Date().toISOString().replace('T', ' ').slice(0, 19)}] ${msg}`, ...rest);
 }
 
-function saveJson(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+function saveJson(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
 }
 
-function loadJson(filePath, fallback = null) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch {
-    return fallback;
-  }
+function loadJson(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { return fallback; }
 }
 
-function slugify(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function slugify(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-async function downloadImage(url, destPath) {
+async function downloadImage(url, dest) {
+  if (fs.existsSync(dest)) return dest;
   return new Promise((resolve, reject) => {
-    if (fs.existsSync(destPath)) return resolve(destPath);
-
     const proto = url.startsWith('https') ? https : http;
-    const file = fs.createWriteStream(destPath);
-
-    proto
-      .get(url, { timeout: 15000 }, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          file.close();
-          fs.unlink(destPath, () => {});
-          return downloadImage(res.headers.location, destPath).then(resolve).catch(reject);
-        }
-        if (res.statusCode !== 200) {
-          file.close();
-          fs.unlink(destPath, () => {});
-          return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
-        }
-        res.pipe(file);
-        file.on('finish', () => file.close(() => resolve(destPath)));
-      })
-      .on('error', (err) => {
-        fs.unlink(destPath, () => {});
-        reject(err);
-      });
+    const file = fs.createWriteStream(dest);
+    proto.get(url, { timeout: 15000 }, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        file.close(); fs.unlink(dest, () => {});
+        return downloadImage(res.headers.location, dest).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        file.close(); fs.unlink(dest, () => {});
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
+      res.pipe(file);
+      file.on('finish', () => file.close(() => resolve(dest)));
+    }).on('error', (e) => { fs.unlink(dest, () => {}); reject(e); });
   });
 }
 
 function writeCsv(parts) {
   const headers = [
-    'part_number',
-    'part_name',
-    'category',
-    'subcategory',
-    'make',
-    'model',
-    'year',
-    'engine',
-    'description',
-    'specifications',
-    'oem_numbers',
-    'price',
-    'currency',
-    'image_urls',
-    'local_images',
-    'product_url',
-    'scraped_at',
+    'part_number', 'part_name', 'category', 'subcategory',
+    'make', 'model', 'year', 'engine',
+    'description', 'specifications', 'oem_numbers', 'fitment',
+    'price', 'currency', 'image_urls', 'local_images', 'product_url', 'scraped_at',
   ];
-
-  const escape = (v) => {
+  const esc = (v) => {
     const s = String(v ?? '').replace(/"/g, '""');
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+    return /[,"\n]/.test(s) ? `"${s}"` : s;
   };
-
   const rows = [headers.join(',')];
   for (const p of parts) {
-    rows.push(
-      [
-        p.partNumber,
-        p.partName,
-        p.category,
-        p.subcategory,
-        p.make,
-        p.model,
-        p.year,
-        p.engine,
-        p.description,
-        Array.isArray(p.specifications)
-          ? p.specifications.map((s) => `${s.key}:${s.value}`).join('; ')
-          : '',
-        Array.isArray(p.oemNumbers) ? p.oemNumbers.join('; ') : '',
-        p.price,
-        p.currency,
-        Array.isArray(p.imageUrls) ? p.imageUrls.join('; ') : '',
-        Array.isArray(p.localImages) ? p.localImages.join('; ') : '',
-        p.productUrl,
-        p.scrapedAt,
-      ]
-        .map(escape)
-        .join(',')
-    );
+    rows.push([
+      p.partNumber, p.partName, p.category, p.subcategory,
+      p.make, p.model, p.year, p.engine,
+      p.description,
+      (p.specifications || []).map((s) => `${s.key}:${s.value}`).join('; '),
+      (p.oemNumbers || []).join('; '),
+      (p.fitmentData || []).join('; '),
+      p.price, p.currency,
+      (p.imageUrls || []).join('; '),
+      (p.localImages || []).join('; '),
+      p.productUrl, p.scrapedAt,
+    ].map(esc).join(','));
   }
-
   fs.writeFileSync(CONFIG.csvFile, rows.join('\n'), 'utf8');
 }
 
-// ─── CTR site interaction helpers ─────────────────────────────────────────────
+// ─── CTR URL builders ─────────────────────────────────────────────────────────
+
+function buildListUrl(vehicle, year, group, searchLoc) {
+  const params = new URLSearchParams({
+    location: searchLoc,
+    searchLocation: 'global',
+    brand: vehicle.make,
+    model: vehicle.ctrModel || vehicle.model,
+    year2: String(year),
+    groups: group,
+  });
+  return `${CONFIG.baseUrl}/Catalogue/SearchList?${params}`;
+}
+
+function buildDetailUrl(oeId, searchLoc) {
+  const params = new URLSearchParams({
+    loc: 'global',
+    searchLoc,
+    oe_id: String(oeId),
+  });
+  return `${CONFIG.baseUrl}/Catalogue/SearchDetail?${params}`;
+}
+
+// ─── Page parsers ─────────────────────────────────────────────────────────────
 
 /**
- * Navigate to the main page and detect which search mechanism the site uses.
- * CTR may use:
- *   A) A dropdown sequence: Make → Model → Year → Part category
- *   B) A text search box
- *   C) A URL-based catalog (e.g. /catalog?make=TOYOTA&model=COROLLA)
- *
- * Returns a descriptor of the search method found.
+ * Parse a SearchList results page and return all part stubs visible on it.
+ * Returns [] if no results or page is empty.
  */
-async function detectSearchMethod(page) {
-  await page.goto(CONFIG.baseUrl + '/Main', {
-    waitUntil: 'networkidle',
-    timeout: CONFIG.pageTimeout,
-  });
-
-  const method = await page.evaluate(() => {
-    const selects = Array.from(document.querySelectorAll('select')).map((s) => ({
-      id: s.id,
-      name: s.name,
-      className: s.className,
-      options: Array.from(s.options).map((o) => o.text.trim()).filter(Boolean),
-    }));
-
-    const searchInputs = Array.from(
-      document.querySelectorAll('input[type="text"], input[type="search"]')
-    ).map((i) => ({ id: i.id, name: i.name, placeholder: i.placeholder }));
-
-    const navLinks = Array.from(document.querySelectorAll('a[href]'))
-      .map((a) => ({ href: a.href, text: a.textContent.trim() }))
-      .filter((a) => a.text && (
-        a.href.includes('catalog') ||
-        a.href.includes('search') ||
-        a.href.includes('product') ||
-        a.href.includes('parts') ||
-        a.href.includes('item')
-      ));
-
-    return { selects, searchInputs, navLinks };
-  });
-
-  return method;
-}
-
-/**
- * Search the CTR catalog for a specific vehicle.
- * This function handles the most common patterns seen on Korean aftermarket sites.
- *
- * Returns an array of part result URLs/objects found on the search results page.
- */
-async function searchVehicleParts(page, vehicle, year) {
-  const { make, model } = vehicle;
-  log(`  Searching: ${make} ${model} ${year}`);
-
-  // Strategy 1: Use select dropdowns if available
-  const dropdownResult = await tryDropdownSearch(page, make, model, year);
-  if (dropdownResult) return dropdownResult;
-
-  // Strategy 2: Use text search
-  const textResult = await tryTextSearch(page, make, model, year);
-  if (textResult) return textResult;
-
-  // Strategy 3: Try direct URL patterns common on Korean auto parts sites
-  const urlPatterns = [
-    `/search?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&year=${year}`,
-    `/catalog/search?keyword=${encodeURIComponent(make + ' ' + model)}&year=${year}`,
-    `/parts/search?brand=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`,
-    `/product/list?maker=${encodeURIComponent(make)}&car=${encodeURIComponent(model)}`,
-  ];
-
-  for (const pattern of urlPatterns) {
-    try {
-      const response = await page.goto(CONFIG.baseUrl + pattern, {
-        waitUntil: 'networkidle',
-        timeout: 20000,
-      });
-      if (response && response.status() === 200) {
-        const parts = await extractPartsFromResultsPage(page, make, model, year);
-        if (parts.length > 0) {
-          log(`    Found ${parts.length} parts via URL pattern: ${pattern}`);
-          return parts;
-        }
-      }
-    } catch {
-      // Try next pattern
-    }
-    await sleep(500);
-  }
-
-  return [];
-}
-
-async function tryDropdownSearch(page, make, model, year) {
-  await page.goto(CONFIG.baseUrl + '/Main', {
-    waitUntil: 'networkidle',
-    timeout: CONFIG.pageTimeout,
-  });
-
-  const selects = await page.$$('select');
-  if (selects.length === 0) return null;
-
-  // Try to find a make/brand dropdown
-  for (const sel of selects) {
-    const options = await sel.evaluate((el) =>
-      Array.from(el.options).map((o) => o.text.trim().toUpperCase())
-    );
-    if (
-      options.some(
-        (o) => o.includes('TOYOTA') || o.includes('HONDA') || o.includes('MAKER') || o.includes('BRAND')
-      )
-    ) {
-      // This looks like a make dropdown
-      try {
-        await sel.selectOption({ label: new RegExp(make, 'i') });
-        await sleep(1000);
-
-        // Wait for next dropdown to populate (model)
-        const modelSels = await page.$$('select');
-        for (const mSel of modelSels) {
-          const mOptions = await mSel.evaluate((el) =>
-            Array.from(el.options).map((o) => o.text.trim().toUpperCase())
-          );
-          if (mOptions.some((o) => o.includes(model.split(' ')[0]))) {
-            await mSel.selectOption({ label: new RegExp(model.split(' ')[0], 'i') });
-            await sleep(1000);
-          }
-        }
-
-        // Try year dropdown
-        const yearSels = await page.$$('select');
-        for (const ySel of yearSels) {
-          const yOptions = await ySel.evaluate((el) =>
-            Array.from(el.options).map((o) => o.text.trim())
-          );
-          if (yOptions.some((o) => o.includes(String(year)))) {
-            await ySel.selectOption({ label: String(year) });
-            await sleep(1000);
-          }
-        }
-
-        // Submit the search
-        const submitBtn = await page.$('button[type="submit"], input[type="submit"], .btn-search, .search-btn');
-        if (submitBtn) {
-          await submitBtn.click();
-          await page.waitForLoadState('networkidle', { timeout: 20000 });
-          return await extractPartsFromResultsPage(page, make, model, year);
-        }
-      } catch {
-        // Dropdown approach failed, fall through
-      }
-      break;
-    }
-  }
-
-  return null;
-}
-
-async function tryTextSearch(page, make, model, year) {
-  await page.goto(CONFIG.baseUrl + '/Main', {
-    waitUntil: 'networkidle',
-    timeout: CONFIG.pageTimeout,
-  });
-
-  const searchInput = await page.$(
-    'input[type="text"][name*="search" i], input[type="text"][id*="search" i], ' +
-    'input[type="search"], input[placeholder*="search" i], input[placeholder*="part" i]'
-  );
-
-  if (!searchInput) return null;
-
-  const query = `${make} ${model} ${year}`;
-  await searchInput.fill(query);
-
-  const submitBtn = await page.$(
-    'button[type="submit"], input[type="submit"], ' +
-    '.btn-search, .search-btn, button.search'
-  );
-  if (submitBtn) {
-    await submitBtn.click();
-  } else {
-    await searchInput.press('Enter');
-  }
-
-  await page.waitForLoadState('networkidle', { timeout: 20000 });
-  return await extractPartsFromResultsPage(page, make, model, year);
-}
-
-/**
- * Parse a search results page and return part stubs for further detail fetching.
- */
-async function extractPartsFromResultsPage(page, make, model, year) {
+async function parseListPage(page, vehicle, year, group, searchLoc) {
   return page.evaluate(
-    ({ make, model, year }) => {
-      const results = [];
+    ({ make, model, year, group, searchLoc }) => {
+      const stubs = [];
 
-      // Common patterns for product cards on Korean aftermarket sites
-      const cardSelectors = [
-        '.product-item', '.part-item', '.goods-item', '.item-box',
-        '.product_item', '.product_list li', '.goods_list li',
-        '.catalog-item', '.search-result-item', 'li.item',
-        '[class*="product"][class*="card"]', '[class*="part"][class*="item"]',
-        '.prd-item', '.prd_item', '.goods-card',
+      // Each result row/card on CTR's SearchList page
+      // Selectors observed on Korean aftermarket list pages
+      const rowSelectors = [
+        'table.list tbody tr',
+        '.result-list tr',
+        '.catalogue-list tr',
+        '.parts-list tr',
+        'tr[data-oe-id]',
+        'tr[onclick]',
+        '.item-row',
+        '.product-row',
+        'li.item',
+        '.list-item',
       ];
 
-      let cards = [];
-      for (const sel of cardSelectors) {
-        cards = Array.from(document.querySelectorAll(sel));
-        if (cards.length > 0) break;
+      let rows = [];
+      for (const sel of rowSelectors) {
+        rows = Array.from(document.querySelectorAll(sel));
+        if (rows.length > 0) break;
       }
 
-      // Fallback: look for links that appear to be product links
-      if (cards.length === 0) {
-        const productLinks = Array.from(document.querySelectorAll('a[href*="product"], a[href*="item"], a[href*="part"], a[href*="goods"]'));
-        for (const link of productLinks.slice(0, 100)) {
-          results.push({
-            productUrl: link.href,
-            partName: link.textContent.trim(),
-            partNumber: null,
-            make,
-            model,
-            year,
-            thumbnailUrl: null,
-          });
-        }
-        return results;
-      }
+      // Also look for any anchor tags that link to SearchDetail
+      const detailLinks = Array.from(
+        document.querySelectorAll('a[href*="SearchDetail"], a[href*="searchDetail"]')
+      );
 
-      for (const card of cards) {
-        const link = card.querySelector('a[href]');
-        const nameEl = card.querySelector(
-          '.product-name, .part-name, .goods-name, .item-name, ' +
-          '.title, h3, h4, .name, [class*="name"], [class*="title"]'
-        );
-        const numberEl = card.querySelector(
-          '.part-number, .item-no, .goods-no, .part-no, ' +
-          '[class*="number"], [class*="partno"], [class*="code"]'
-        );
-        const imgEl = card.querySelector('img');
-        const priceEl = card.querySelector(
-          '.price, .amount, [class*="price"], [class*="amount"]'
-        );
+      for (const link of detailLinks) {
+        const url = new URL(link.href, location.origin);
+        const oeId = url.searchParams.get('oe_id');
+        const sLoc = url.searchParams.get('searchLoc') || searchLoc;
+        if (!oeId) continue;
 
-        results.push({
-          productUrl: link ? link.href : null,
-          partName: nameEl ? nameEl.textContent.trim() : (link ? link.textContent.trim() : null),
-          partNumber: numberEl ? numberEl.textContent.trim().replace(/[^\w-]/g, '') : null,
-          thumbnailUrl: imgEl ? imgEl.src : null,
-          price: priceEl ? priceEl.textContent.trim() : null,
-          make,
-          model,
-          year,
+        const row = link.closest('tr, li, .item, .product, .row') || link.parentElement;
+        const cells = row ? Array.from(row.querySelectorAll('td, th, .cell, .col')) : [];
+
+        const partNumberEl = row?.querySelector(
+          '[class*="part-no"], [class*="partno"], [class*="code"], td:nth-child(1)'
+        );
+        const partNameEl = row?.querySelector(
+          '[class*="name"], [class*="title"], [class*="desc"], td:nth-child(2)'
+        );
+        const imgEl = row?.querySelector('img');
+
+        stubs.push({
+          oeId,
+          searchLoc: sLoc,
+          detailUrl: link.href,
+          partNumber: partNumberEl?.textContent?.trim() || link.textContent?.trim() || '',
+          partName: partNameEl?.textContent?.trim() || cells[1]?.textContent?.trim() || '',
+          thumbnailUrl: imgEl?.src || null,
+          make, model, year, group,
         });
       }
 
-      return results.filter((r) => r.productUrl || r.partName);
+      // If no links found, try parsing table rows directly
+      if (stubs.length === 0 && rows.length > 0) {
+        rows.forEach((row) => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          if (cells.length < 2) return;
+          const onclick = row.getAttribute('onclick') || '';
+          const oeMatch = onclick.match(/oe_id[=\s'"]+(\d+)/);
+          const oeId = oeMatch ? oeMatch[1] : null;
+          stubs.push({
+            oeId,
+            searchLoc,
+            detailUrl: oeId
+              ? `${location.origin}/Catalogue/SearchDetail?loc=global&searchLoc=${searchLoc}&oe_id=${oeId}`
+              : null,
+            partNumber: cells[0]?.textContent?.trim() || '',
+            partName: cells[1]?.textContent?.trim() || '',
+            thumbnailUrl: row.querySelector('img')?.src || null,
+            make, model, year, group,
+          });
+        });
+      }
+
+      return stubs;
     },
-    { make, model, year }
+    { make: vehicle.make, model: vehicle.ctrModel || vehicle.model, year, group, searchLoc }
   );
 }
 
 /**
- * Fetch the detail page for a single part and return the full data record.
+ * Check how many pages of results exist and return total count.
  */
-async function scrapePart(page, stub, retries = 0) {
-  if (!stub.productUrl) return null;
+async function getTotalPages(page) {
+  return page.evaluate(() => {
+    // Look for a pagination indicator
+    const pageInfo = document.querySelector(
+      '.pagination, .paging, [class*="page-info"], [class*="total-count"]'
+    );
+    if (!pageInfo) return 1;
+
+    // Try to find "Page X of Y" or a count of page links
+    const text = pageInfo.textContent;
+    const match = text.match(/(\d+)\s*\/\s*(\d+)|of\s+(\d+)|총\s*(\d+)/);
+    if (match) return parseInt(match[2] || match[3] || match[4], 10) || 1;
+
+    const pageLinks = pageInfo.querySelectorAll('a, button, span[class*="page"]');
+    return pageLinks.length > 0 ? pageLinks.length : 1;
+  });
+}
+
+/**
+ * Click to the next page, return false if no next page.
+ */
+async function goToNextPage(page) {
+  const nextBtn = await page.$(
+    'a.next, button.next, .pagination .next, li.next a, ' +
+    'a[aria-label*="next" i], .page-next a, .btn-next, ' +
+    'a[title*="next" i], span.next a, .paging-next'
+  );
+  if (!nextBtn) return false;
+
+  const disabled = await nextBtn.evaluate((el) =>
+    el.classList.contains('disabled') ||
+    el.getAttribute('disabled') != null ||
+    el.getAttribute('aria-disabled') === 'true'
+  );
+  if (disabled) return false;
+
+  await nextBtn.click();
+  await page.waitForLoadState('networkidle', { timeout: 20000 });
+  return true;
+}
+
+/**
+ * Scrape the detail page for a single part.
+ */
+async function scrapeDetail(page, stub, retries = 0) {
+  if (!stub.detailUrl && !stub.oeId) return null;
+
+  const url = stub.detailUrl || buildDetailUrl(stub.oeId, stub.searchLoc);
 
   try {
-    await page.goto(stub.productUrl, {
-      waitUntil: 'networkidle',
-      timeout: CONFIG.pageTimeout,
-    });
+    await page.goto(url, { waitUntil: 'networkidle', timeout: CONFIG.pageTimeout });
   } catch (err) {
     if (retries < CONFIG.maxRetries) {
       await sleep(2000 * (retries + 1));
-      return scrapePart(page, stub, retries + 1);
+      return scrapeDetail(page, stub, retries + 1);
     }
-    log(`    SKIP (load error): ${stub.productUrl} — ${err.message}`);
+    log(`    SKIP (load error): ${url} — ${err.message}`);
     return null;
   }
 
   const detail = await page.evaluate((stub) => {
-    // ── Part number ──────────────────────────────────────────────────────────
-    const partNumberSelectors = [
-      '.part-number', '.item-no', '.goods-no', '.part-no',
-      '[class*="partno"]', '[class*="part_no"]', '[class*="part-number"]',
-      '[class*="item_code"]', '[class*="itemcode"]', 'td.code', '.code',
+    // ── Part number ────────────────────────────────────────────────────────
+    let partNumber = stub.partNumber || '';
+    const pnSelectors = [
+      '.part-number', '.item-no', '.goods-no', '.part-no', '.code',
+      'td.partnumber', '[class*="partno"]', '[class*="part_no"]',
+      '[class*="part-number"]', '[class*="item_code"]',
+      'h1 span', '.product-code',
     ];
-    let partNumber = stub.partNumber;
-    for (const sel of partNumberSelectors) {
+    for (const sel of pnSelectors) {
       const el = document.querySelector(sel);
-      if (el) {
-        partNumber = el.textContent.trim().replace(/[^A-Z0-9\-_]/gi, '');
-        break;
-      }
+      if (el?.textContent?.trim()) { partNumber = el.textContent.trim(); break; }
+    }
+    // Also check page title — CTR titles look like "Search > CB0171 | CTR Aftermarket"
+    if (!partNumber) {
+      const titleMatch = document.title.match(/>\s*([A-Z]{1,3}\d{3,5}[A-Z]?)\s*\|/);
+      if (titleMatch) partNumber = titleMatch[1];
     }
 
-    // ── Part name ────────────────────────────────────────────────────────────
+    // ── Part name ──────────────────────────────────────────────────────────
+    let partName = stub.partName || '';
     const nameSelectors = [
-      'h1.product-name', 'h1.goods-name', 'h1.item-name', 'h1',
-      '.product-title', '.goods-title', '.part-title', '.item-title',
-      '[class*="product_name"]', '[class*="goods_name"]',
+      'h1', 'h2.product-name', 'h1.goods-name', '.item-title',
+      '.product-title', '[class*="part-name"]', '[class*="item-name"]',
+      '.part_name', '.goods_name',
     ];
-    let partName = stub.partName;
     for (const sel of nameSelectors) {
       const el = document.querySelector(sel);
-      if (el && el.textContent.trim()) {
-        partName = el.textContent.trim();
+      if (el?.textContent?.trim() && el.textContent.trim() !== partNumber) {
+        partName = el.textContent.trim().substring(0, 200);
         break;
       }
     }
 
-    // ── Images ───────────────────────────────────────────────────────────────
-    const imageSelectors = [
-      '.product-image img', '.goods-image img', '.item-image img',
-      '.product-photo img', '.part-photo img',
-      '.swiper-slide img', '.gallery img', '.thumbnail img',
-      '[class*="product_img"] img', '[class*="goods_img"] img',
-      '#productImage img', '#itemImage img',
+    // ── Images ────────────────────────────────────────────────────────────
+    const imageUrls = [];
+    const imgSelectors = [
+      '.product-image img', '.goods-image img', '.part-image img',
+      '.swiper-slide img', '.gallery img', '.product-photo img',
+      '#mainImage img', '#productImage', '.main-img img',
+      '[class*="product_img"] img', '[class*="part_img"] img',
+      'img[src*="upload"]', 'img[src*="product"]', 'img[src*="image"]',
     ];
-    const imageUrls = new Set();
-    for (const sel of imageSelectors) {
+    const seen = new Set();
+    for (const sel of imgSelectors) {
       document.querySelectorAll(sel).forEach((img) => {
-        const src = img.src || img.dataset.src || img.dataset.lazy;
-        if (src && src.startsWith('http') && !src.includes('noimage')) {
-          imageUrls.add(src);
+        const src = img.src || img.dataset?.src || img.dataset?.lazy || '';
+        if (src && src.startsWith('http') && !src.includes('noimage') && !src.includes('blank') && !seen.has(src)) {
+          seen.add(src);
+          imageUrls.push(src);
         }
       });
     }
 
-    // ── Specifications table ─────────────────────────────────────────────────
+    // ── Specifications ─────────────────────────────────────────────────────
     const specifications = [];
-    const specSelectors = [
-      '.spec-table tr', '.detail-table tr', '.product-info tr',
-      '.goods-info tr', '.item-spec tr', 'table.spec tr',
-      '[class*="spec"] tr', '[class*="detail"] tr', 'dl dt',
+    // Try spec tables
+    const specTableSelectors = [
+      '.spec-table tr', 'table.spec tr', '.spec tr',
+      '.detail-table tr', '.product-info tr', '.part-info tr',
+      'table.detail tr', '[class*="spec"] tr', '[class*="detail"] tr',
     ];
-
-    for (const sel of specSelectors) {
+    for (const sel of specTableSelectors) {
       const rows = document.querySelectorAll(sel);
       if (rows.length > 0) {
         rows.forEach((row) => {
-          const cells = row.querySelectorAll('td, th');
-          if (cells.length >= 2) {
-            const key = cells[0].textContent.trim();
-            const value = cells[1].textContent.trim();
-            if (key && value && key !== value) {
-              specifications.push({ key, value });
-            }
+          const [th, td] = [row.querySelector('th, td:first-child'), row.querySelector('td:not(:first-child), td:last-child')];
+          if (th && td && th !== td) {
+            const key = th.textContent.trim();
+            const value = td.textContent.trim();
+            if (key && value) specifications.push({ key, value });
           }
         });
         if (specifications.length > 0) break;
       }
     }
-
-    // Also check definition lists
-    const dts = document.querySelectorAll('dl dt');
-    dts.forEach((dt) => {
+    // Try definition lists
+    document.querySelectorAll('dl dt').forEach((dt) => {
       const dd = dt.nextElementSibling;
-      if (dd && dd.tagName === 'DD') {
+      if (dd?.tagName === 'DD') {
         specifications.push({ key: dt.textContent.trim(), value: dd.textContent.trim() });
       }
     });
 
-    // ── OEM / cross-reference numbers ────────────────────────────────────────
-    const oemSelectors = [
-      '.oem-number', '.cross-reference', '.ref-number',
-      '[class*="oem"]', '[class*="cross"]', '[class*="ref"]',
-    ];
+    // ── OEM / cross-reference numbers ──────────────────────────────────────
     const oemNumbers = [];
+    const oemSelectors = [
+      '.oem-number', '.oe-number', '.oem-ref', '.cross-ref',
+      '[class*="oem"]', '[class*="cross"]', '[class*="oe-num"]',
+      'td.oe', 'td.oem', '.ref-no',
+    ];
     for (const sel of oemSelectors) {
       document.querySelectorAll(sel).forEach((el) => {
-        const text = el.textContent.trim();
-        if (text) oemNumbers.push(text);
+        const t = el.textContent.trim();
+        if (t && !oemNumbers.includes(t)) oemNumbers.push(t);
       });
     }
 
-    // ── Vehicle application / fitment ────────────────────────────────────────
-    const fitmentSelectors = [
-      '.application', '.fitment', '.vehicle-list', '.car-list',
-      '[class*="application"]', '[class*="fitment"]', '[class*="vehicle"]',
-      '.applicable-car', '.oe-application',
-    ];
+    // ── Vehicle application / fitment ──────────────────────────────────────
     const fitmentData = [];
+    const fitmentSelectors = [
+      '.application', '.fitment', '.vehicle-list li', '.car-list li',
+      '[class*="application"] li', '[class*="fitment"] li',
+      '.applicable-car', 'table.application tr', '.oe-application li',
+    ];
     for (const sel of fitmentSelectors) {
       document.querySelectorAll(sel).forEach((el) => {
-        const text = el.textContent.trim();
-        if (text) fitmentData.push(text);
+        const t = el.textContent.trim();
+        if (t && t.length > 2) fitmentData.push(t);
       });
     }
 
-    // ── Category breadcrumb ──────────────────────────────────────────────────
+    // ── Category from breadcrumb ───────────────────────────────────────────
     const breadcrumbs = Array.from(
-      document.querySelectorAll(
-        '.breadcrumb a, .breadcrumb li, nav.breadcrumb span, ' +
-        '[class*="breadcrumb"] a, [class*="breadcrumb"] span'
-      )
-    )
-      .map((el) => el.textContent.trim())
-      .filter(Boolean);
+      document.querySelectorAll('.breadcrumb a, .breadcrumb li, [class*="breadcrumb"] span, nav[aria-label*="breadcrumb"] a')
+    ).map((el) => el.textContent.trim()).filter(Boolean);
 
-    // ── Description ──────────────────────────────────────────────────────────
+    // ── Description ───────────────────────────────────────────────────────
+    let description = '';
     const descSelectors = [
       '.product-description', '.goods-description', '.item-desc',
       '.description', '.detail-desc', '[class*="description"]',
     ];
-    let description = '';
     for (const sel of descSelectors) {
       const el = document.querySelector(sel);
-      if (el) {
-        description = el.textContent.trim().substring(0, 1000);
-        break;
-      }
+      if (el?.textContent?.trim()) { description = el.textContent.trim().substring(0, 1000); break; }
     }
 
-    // ── Price ────────────────────────────────────────────────────────────────
-    let price = stub.price;
-    let currency = '';
-    const priceEl = document.querySelector(
-      '.price, .amount, [class*="price"], [class*="amount"], .cost'
-    );
+    // ── Price ─────────────────────────────────────────────────────────────
+    let price = '', currency = '';
+    const priceEl = document.querySelector('.price, .amount, [class*="price"], .cost');
     if (priceEl) {
-      const priceText = priceEl.textContent.trim();
-      price = priceText.replace(/[^\d.,]/g, '').trim();
-      currency = priceText.replace(/[\d.,\s]/g, '').trim() || 'KRW';
+      const t = priceEl.textContent.trim();
+      price = t.replace(/[^\d.,]/g, '').trim();
+      currency = t.replace(/[\d.,\s]/g, '').trim() || 'KRW';
     }
 
-    // ── Category from breadcrumb or headings ─────────────────────────────────
-    const category = breadcrumbs[1] || '';
-    const subcategory = breadcrumbs[2] || '';
+    // ── Engine / variant info ─────────────────────────────────────────────
+    let engine = '';
+    const engineEl = document.querySelector('[class*="engine"], [class*="variant"], td.engine');
+    if (engineEl) engine = engineEl.textContent.trim();
 
     return {
-      partNumber,
+      partNumber: partNumber.replace(/\s+/g, '').toUpperCase(),
       partName,
-      category,
-      subcategory,
-      description,
-      imageUrls: Array.from(imageUrls).slice(0, 5),
+      imageUrls: imageUrls.slice(0, 6),
       specifications,
       oemNumbers,
       fitmentData,
+      breadcrumbs,
+      description,
       price,
       currency,
-      breadcrumbs,
+      engine,
       pageTitle: document.title,
     };
   }, stub);
 
-  // ── Build the final part record ───────────────────────────────────────────
+  // ── Build record ──────────────────────────────────────────────────────────
+  const category = detail.breadcrumbs[1] || stub.group || '';
+  const subcategory = detail.breadcrumbs[2] || '';
+
   const record = {
     partNumber: detail.partNumber || stub.partNumber || '',
     partName: detail.partName || stub.partName || '',
-    category: detail.category,
-    subcategory: detail.subcategory,
+    category,
+    subcategory,
     make: stub.make,
     model: stub.model,
     year: stub.year,
-    engine: '',
+    engine: detail.engine,
     description: detail.description,
     imageUrls: detail.imageUrls,
     localImages: [],
     specifications: detail.specifications,
     oemNumbers: detail.oemNumbers,
     fitmentData: detail.fitmentData,
-    price: detail.price || '',
-    currency: detail.currency || '',
-    productUrl: stub.productUrl,
-    pageTitle: detail.pageTitle,
-    breadcrumbs: detail.breadcrumbs,
+    price: detail.price,
+    currency: detail.currency,
+    productUrl: url,
+    oeId: stub.oeId,
+    searchLoc: stub.searchLoc,
     scrapedAt: new Date().toISOString(),
   };
 
-  // ── Download images ───────────────────────────────────────────────────────
+  // ── Download images ────────────────────────────────────────────────────────
   if (CONFIG.downloadImages && detail.imageUrls.length > 0) {
-    const partSlug = slugify(
+    const slug = slugify(
       `${stub.make}-${stub.model}-${stub.year}-${record.partNumber || record.partName}`
     ).substring(0, 80);
-    const imgDir = path.join(CONFIG.imagesDir, partSlug);
+    const imgDir = path.join(CONFIG.imagesDir, slug);
     fs.mkdirSync(imgDir, { recursive: true });
 
     for (let i = 0; i < Math.min(detail.imageUrls.length, CONFIG.maxImagesPerPart); i++) {
       const imgUrl = detail.imageUrls[i];
-      const ext = imgUrl.split('?')[0].split('.').pop() || 'jpg';
-      const destFile = path.join(imgDir, `${i + 1}.${ext}`);
+      const ext = imgUrl.split('?')[0].split('.').pop().substring(0, 4) || 'jpg';
+      const dest = path.join(imgDir, `${i + 1}.${ext}`);
       try {
-        await downloadImage(imgUrl, destFile);
-        record.localImages.push(path.relative(__dirname, destFile));
+        await downloadImage(imgUrl, dest);
+        record.localImages.push(path.relative(__dirname, dest));
       } catch (err) {
-        log(`    Image download failed: ${imgUrl} — ${err.message}`);
+        log(`      Image failed: ${err.message}`);
       }
     }
   }
@@ -665,176 +526,153 @@ async function scrapePart(page, stub, retries = 0) {
   return record;
 }
 
-// ─── Pagination helper ────────────────────────────────────────────────────────
-async function getAllResultPages(page, make, model, year) {
-  const allStubs = await extractPartsFromResultsPage(page, make, model, year);
-
-  // Check for pagination
-  let currentPage = 1;
-  while (true) {
-    const nextBtn = await page.$(
-      'a.next, button.next, .pagination .next, [class*="paging"] .next, ' +
-      'a[aria-label="Next"], .page-next, li.next a, .btn-next'
-    );
-    if (!nextBtn) break;
-
-    const isDisabled = await nextBtn.evaluate((el) =>
-      el.classList.contains('disabled') ||
-      el.getAttribute('disabled') !== null ||
-      el.getAttribute('aria-disabled') === 'true'
-    );
-    if (isDisabled) break;
-
-    await nextBtn.click();
-    await page.waitForLoadState('networkidle', { timeout: 20000 });
-    currentPage++;
-    log(`    → Page ${currentPage}`);
-
-    const pageStubs = await extractPartsFromResultsPage(page, make, model, year);
-    if (pageStubs.length === 0) break;
-
-    allStubs.push(...pageStubs);
-    await sleep(CONFIG.delayBetweenRequests);
-
-    if (currentPage > 50) {
-      log('    Pagination cap (50 pages) reached');
-      break;
-    }
-  }
-
-  return allStubs;
-}
-
 // ─── Main orchestration ───────────────────────────────────────────────────────
 async function main() {
+  const vehicles = brandFilter
+    ? ZIMBABWE_VEHICLES.filter((v) => v.make.toUpperCase() === brandFilter)
+    : ZIMBABWE_VEHICLES;
+
+  const groups = groupFilter
+    ? CTR_GROUPS.filter((g) => g.toUpperCase() === groupFilter)
+    : CTR_GROUPS;
+
   if (FLAG_DRY_RUN) {
-    console.log('DRY RUN — vehicles that would be scraped:');
-    const vehicles = brandFilter
-      ? VEHICLES.filter((v) => v.make === brandFilter)
-      : VEHICLES;
-    vehicles.forEach((v) =>
-      v.years.forEach((y) => console.log(`  ${v.make} ${v.model} ${y}`))
-    );
+    console.log('DRY RUN — search URLs that would be fetched:');
+    for (const v of vehicles) {
+      for (const year of v.years) {
+        for (const group of groups) {
+          for (const loc of CONFIG.searchLocations) {
+            console.log(buildListUrl(v, year, group, loc));
+          }
+        }
+      }
+    }
     return;
   }
 
   fs.mkdirSync(CONFIG.outputDir, { recursive: true });
   fs.mkdirSync(CONFIG.imagesDir, { recursive: true });
 
-  // ── Load progress for resume ───────────────────────────────────────────────
-  const progress = FLAG_RESUME ? (loadJson(CONFIG.progressFile, {}) || {}) : {};
-  const allParts = FLAG_RESUME
-    ? (loadJson(CONFIG.partsFile, []) || [])
-    : [];
+  const progress = FLAG_RESUME ? loadJson(CONFIG.progressFile, {}) : {};
+  const allParts = FLAG_RESUME ? loadJson(CONFIG.partsFile, []) : [];
+  // Quick lookup to avoid re-scraping the same oe_id across vehicles
+  const scrapedOeIds = new Set(allParts.map((p) => p.oeId).filter(Boolean));
 
-  const vehicles = brandFilter
-    ? VEHICLES.filter((v) => v.make === brandFilter)
-    : VEHICLES;
+  const totalCombinations = vehicles.reduce(
+    (sum, v) => sum + v.years.length * groups.length * CONFIG.searchLocations.length, 0
+  );
 
   log('=== CTR Zimbabwe Car Parts Scraper ===');
   log(`Target: ${CONFIG.baseUrl}`);
-  log(`Vehicles: ${vehicles.length} makes/models`);
+  log(`Vehicles: ${vehicles.length}  Groups: ${groups.length}  Locations: ${CONFIG.searchLocations.join(', ')}`);
+  log(`Search combinations: ${totalCombinations}`);
   log(`Images: ${CONFIG.downloadImages ? 'enabled' : 'disabled'}`);
-  log(`Resume: ${FLAG_RESUME}`);
+  log(`Resume: ${FLAG_RESUME} (${allParts.length} parts already saved)`);
 
-  // ── Launch browser ─────────────────────────────────────────────────────────
   const browser = await chromium.launch({
     headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-    ],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   });
 
   const context = await browser.newContext({
     userAgent: CONFIG.userAgent,
     viewport: { width: 1920, height: 1080 },
-    acceptDownloads: true,
   });
 
   const page = await context.newPage();
 
-  // ── Detect search method on first load ────────────────────────────────────
-  log('\nDetecting site search method...');
-  let searchMethod;
-  try {
-    searchMethod = await detectSearchMethod(page);
-    log(`  Selects: ${searchMethod.selects.length}, Text inputs: ${searchMethod.searchInputs.length}, Nav links: ${searchMethod.navLinks.length}`);
-    fs.writeFileSync(
-      path.join(CONFIG.outputDir, 'search_method.json'),
-      JSON.stringify(searchMethod, null, 2)
-    );
-  } catch (err) {
-    log(`  Warning: could not load main page — ${err.message}`);
-  }
-
-  // ── Scrape each vehicle ────────────────────────────────────────────────────
+  let done = 0;
   let totalParts = allParts.length;
-  let vehiclesDone = 0;
 
   for (const vehicle of vehicles) {
-    const { make, model, years } = vehicle;
+    for (const year of vehicle.years) {
+      for (const group of groups) {
+        for (const searchLoc of CONFIG.searchLocations) {
+          const key = `${vehicle.make}__${vehicle.model}__${year}__${group}__${searchLoc}`;
+          done++;
 
-    for (const year of years) {
-      const vehicleKey = `${make}__${model}__${year}`;
+          if (FLAG_RESUME && progress[key] === 'done') {
+            log(`SKIP [${done}/${totalCombinations}] ${vehicle.make} ${vehicle.model} ${year} ${group} ${searchLoc}`);
+            continue;
+          }
 
-      if (FLAG_RESUME && progress[vehicleKey] === 'done') {
-        log(`SKIP (already done): ${make} ${model} ${year}`);
-        continue;
-      }
+          log(`[${done}/${totalCombinations}] ${vehicle.make} ${vehicle.model} ${year} — ${group} (${searchLoc})`);
 
-      log(`\n[${++vehiclesDone}/${vehicles.reduce((s, v) => s + v.years.length, 0)}] ${make} ${model} ${year}`);
+          let pageNum = 0;
+          let vehiclePartCount = 0;
 
-      try {
-        const stubs = await searchVehicleParts(page, vehicle, year);
+          try {
+            const listUrl = buildListUrl(vehicle, year, group, searchLoc);
+            await page.goto(listUrl, { waitUntil: 'networkidle', timeout: CONFIG.pageTimeout });
 
-        if (stubs.length === 0) {
-          log(`  No results found`);
-          progress[vehicleKey] = 'no_results';
+            while (true) {
+              pageNum++;
+              const stubs = await parseListPage(page, vehicle, year, group, searchLoc);
+
+              if (stubs.length === 0) {
+                if (pageNum === 1) log('  No results');
+                break;
+              }
+
+              log(`  Page ${pageNum}: ${stubs.length} parts`);
+
+              for (let i = 0; i < stubs.length; i++) {
+                const stub = stubs[i];
+
+                // Skip if we already scraped this OE ID (avoids duplicates across model years)
+                if (stub.oeId && scrapedOeIds.has(stub.oeId)) {
+                  log(`  [${i + 1}/${stubs.length}] SKIP (duplicate oe_id ${stub.oeId})`);
+                  continue;
+                }
+
+                log(`  [${i + 1}/${stubs.length}] ${stub.partNumber || stub.oeId} ${stub.partName?.substring(0, 50)}`);
+
+                const part = await scrapeDetail(page, stub);
+                if (part) {
+                  allParts.push(part);
+                  if (stub.oeId) scrapedOeIds.add(stub.oeId);
+                  totalParts++;
+                  vehiclePartCount++;
+                }
+
+                await sleep(CONFIG.delayBetweenPages);
+
+                // Return to list if detail navigation changed the page
+                if (pageNum > 1 || i < stubs.length - 1) {
+                  const currentUrl = page.url();
+                  if (!currentUrl.includes('SearchList') && !currentUrl.includes('searchList')) {
+                    await page.goto(listUrl, { waitUntil: 'networkidle', timeout: CONFIG.pageTimeout });
+                    // Jump back to current page number
+                    for (let p = 1; p < pageNum; p++) {
+                      await goToNextPage(page);
+                      await sleep(500);
+                    }
+                  }
+                }
+
+                if (totalParts % 20 === 0) {
+                  saveJson(CONFIG.partsFile, allParts);
+                  writeCsv(allParts);
+                  log(`  [checkpoint] ${totalParts} total parts saved`);
+                }
+              }
+
+              const hasNext = await goToNextPage(page);
+              if (!hasNext) break;
+              await sleep(CONFIG.delayBetweenPages);
+            }
+
+            progress[key] = 'done';
+          } catch (err) {
+            log(`  ERROR: ${err.message}`);
+            progress[key] = `error:${err.message.substring(0, 80)}`;
+          }
+
           saveJson(CONFIG.progressFile, progress);
-          await sleep(CONFIG.delayBetweenRequests);
-          continue;
+          log(`  ${vehicle.make} ${vehicle.model} ${year} ${group} ${searchLoc}: ${vehiclePartCount} new parts`);
+          await sleep(CONFIG.delayBetweenVehicles);
         }
-
-        log(`  Found ${stubs.length} part stubs, fetching details...`);
-
-        // Paginate if needed (already fetched first page stubs via searchVehicleParts)
-        // For subsequent pages, we'd need to re-navigate — handled by getAllResultPages
-        // if called directly on a results page.
-
-        for (let i = 0; i < stubs.length; i++) {
-          const stub = stubs[i];
-          if (!stub.productUrl) continue;
-
-          log(`  [${i + 1}/${stubs.length}] ${stub.partName || stub.productUrl}`);
-
-          const part = await scrapePart(page, { ...stub, make, model, year });
-          if (part) {
-            allParts.push(part);
-            totalParts++;
-          }
-
-          await sleep(CONFIG.delayBetweenRequests);
-
-          // Save incremental progress every 10 parts
-          if (totalParts % 10 === 0) {
-            saveJson(CONFIG.partsFile, allParts);
-            writeCsv(allParts);
-            log(`  [saved] ${totalParts} parts so far`);
-          }
-        }
-
-        progress[vehicleKey] = 'done';
-        saveJson(CONFIG.progressFile, progress);
-      } catch (err) {
-        log(`  ERROR for ${make} ${model} ${year}: ${err.message}`);
-        progress[vehicleKey] = `error:${err.message}`;
-        saveJson(CONFIG.progressFile, progress);
       }
-
-      await sleep(CONFIG.delayBetweenVehicles);
     }
   }
 
@@ -844,12 +682,13 @@ async function main() {
 
   await browser.close();
 
-  log(`\n=== Done ===`);
-  log(`Total parts scraped: ${allParts.length}`);
-  log(`Output: ${CONFIG.outputDir}`);
-  log(`  parts.json  — structured data`);
-  log(`  parts.csv   — flat spreadsheet`);
-  log(`  images/     — downloaded part images`);
+  log('\n=== Done ===');
+  log(`Total parts: ${allParts.length}`);
+  log(`Output directory: ${CONFIG.outputDir}`);
+  log('  parts.json — structured JSON');
+  log('  parts.csv  — spreadsheet CSV');
+  log('  images/    — part images');
+  log('\nNext step: node postprocess.js');
 }
 
 main().catch((err) => {
